@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Menu, Bell, User, LogOut, Settings } from 'lucide-react';
+import ThemeToggle from '../ui/ThemeToggle';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -41,6 +42,9 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuClick, sidebarOpen }) => {
 
           {/* Right side */}
           <div className="navbar-right">
+            {/* Theme Toggle */}
+            <ThemeToggle variant="button" size="md" />
+
             {/* Notifications */}
             <button
               className="navbar-action-btn"
