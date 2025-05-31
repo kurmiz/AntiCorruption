@@ -38,44 +38,27 @@ A modern, secure web application for reporting and managing corruption incidents
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/anti-corruption-portal.git
-   cd anti-corruption-portal
+   npm run install:all
    ```
-
-2. **Install dependencies**
+3. Start the frontend development server:
    ```bash
-   npm install
-   # or
-   yarn install
+   npm run frontend
    ```
-
-3. **Start development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
-
-4. **Open your browser**
-   ```
-   http://localhost:5173
-   ```
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## 🏗️ Project Structure
 
 ```
-src/
-├── components/           # Reusable UI components
-│   ├── layout/          # Layout components (Navbar, Sidebar)
-│   ├── forms/           # Form components
-│   └── ui/              # Basic UI elements
-├── pages/               # Page components
-│   ├── auth/            # Authentication pages
-│   ├── dashboard/       # Dashboard pages by role
-│   ├── reports/         # Report management pages
-│   └── profile/         # User profile pages
-├── contexts/            # React Context providers
-├── hooks/               # Custom React hooks
+├── frontend/          # Frontend React application
+│   ├── src/
+│   │   ├── components/  # Reusable React components
+│   │   ├── pages/      # Page components and routes
+│   │   ├── styles/     # CSS styles and themes
+│   │   ├── utils/      # Utility functions and helpers
+│   │   └── types/      # TypeScript type definitions
+│   ├── public/         # Static assets
+│   └── package.json    # Frontend dependencies
+└── package.json        # Root project configuration
 ├── types/               # TypeScript type definitions
 ├── utils/               # Utility functions
 └── assets/              # Static assets

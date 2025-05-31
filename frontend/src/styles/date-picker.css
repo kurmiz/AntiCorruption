@@ -1,0 +1,175 @@
+/* Reset form field styles */
+.form-field-input.datetime-picker-input {
+  all: unset;
+  box-sizing: border-box;
+}
+
+/* Date Picker Container */
+.datetime-picker-container {
+  position: relative;
+  width: 100%;
+}
+
+.datetime-picker-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease-out;
+  height: 2.75rem;
+  overflow: hidden;
+}
+
+.datetime-picker-input-wrapper:hover {
+  border-color: var(--border-hover);
+}
+
+.datetime-picker-input-wrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* Icon */
+.datetime-picker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  color: var(--text-tertiary);
+  transition: color 0.2s ease-out;
+}
+
+.datetime-picker-input-wrapper:hover .datetime-picker-icon,
+.datetime-picker-input-wrapper:focus-within .datetime-picker-icon {
+  color: var(--color-primary);
+}
+
+/* Input Field */
+.datetime-picker-input {
+  flex: 1;
+  padding: 0.5rem 2.5rem 0.5rem 0.75rem !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--text-primary) !important;
+  font-size: var(--font-size-base) !important;
+  font-family: inherit !important;
+  cursor: pointer;
+  height: 100%;
+  min-width: 150px;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.datetime-picker-input:focus {
+  outline: none;
+}
+
+/* Calendar Popup Styling */
+.datetime-picker-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 2.5rem;
+  height: 100%;
+  padding: 0;
+  cursor: pointer;
+  z-index: 1;
+}
+
+/* Hide default calendar icon */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Custom Calendar Icon */
+.datetime-picker-icon {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-tertiary);
+}
+
+.datetime-picker-input-wrapper:hover .datetime-picker-icon {
+  color: var(--text-primary);
+}
+
+/* Placeholder */
+.datetime-picker-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Disabled State */
+.datetime-picker-input-wrapper:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+}
+
+/* Dark Mode */
+:root[data-theme="dark"] .datetime-picker-input-wrapper {
+  background: var(--bg-primary);
+  border-color: var(--border-primary);
+}
+
+:root[data-theme="dark"] .datetime-picker-input {
+  color: var(--text-primary) !important;
+  background: transparent !important;
+}
+
+:root[data-theme="dark"] .datetime-picker-input-wrapper:hover {
+  border-color: var(--color-primary);
+  background: var(--bg-secondary);
+}
+
+:root[data-theme="dark"] .datetime-picker-input-wrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+  background: var(--bg-secondary);
+}
+
+:root[data-theme="dark"] .datetime-picker-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+:root[data-theme="dark"] .datetime-picker-icon {
+  color: var(--text-tertiary);
+}
+
+:root[data-theme="dark"] .datetime-picker-input-wrapper:hover .datetime-picker-icon {
+  color: var(--text-primary);
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+  .datetime-picker-input-wrapper {
+    height: 2.5rem;
+  }
+  
+  .datetime-picker-input {
+    font-size: var(--font-size-sm);
+    padding: 0.375rem 0.5rem;
+  }
+  
+  .datetime-picker-icon {
+    right: 0.5rem;
+  }
+}
+
+/* High Contrast Mode */
+@media (forced-colors: active) {
+  .datetime-picker-input-wrapper {
+    border: 2px solid ButtonBorder;
+  }
+  
+  .datetime-picker-input-wrapper:focus-within {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
+  }
+}
