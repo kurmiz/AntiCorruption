@@ -45,9 +45,9 @@ const Login: React.FC = () => {
       const result = await response.json();
       console.log('Login response:', result);
 
-      if (result.success) {
+      if (result.success && result.data) {
         // Store the token
-        localStorage.setItem('token', result.data.token);
+        localStorage.setItem('auth-token', result.data.token);
         await login(result.data.user);
         navigate('/dashboard');
       } else {

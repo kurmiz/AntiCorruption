@@ -48,7 +48,7 @@ const Register: React.FC = () => {
         email: data.email,
         password: data.password,
         name: `${data.firstName} ${data.lastName}`,
-        role: data.role === 'USER' ? 'citizen' : data.role.toLowerCase(),
+        role: 'citizen', // Default to citizen role for now
         phone: data.phone
       };
 
