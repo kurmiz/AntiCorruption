@@ -1,23 +1,18 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { useForm } from 'react-hook-form';
 import { reportsApi } from '../../services/api';
+import '../../styles/report-submission.css';
 import {
   AlertTriangle,
   Upload,
-  X,
-  MapPin,
   FileText,
-  Camera,
-  Shield,
-  Map,
-  Clock,
   Calendar,
-  User,
-  Building,
-  Globe
+  Shield,
+  Camera,
+  X,
+  Map,
 } from 'lucide-react';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import MapPicker from '../../components/ui/MapPicker';
 import FormField from '../../components/ui/FormField';
 import DateTimePicker from '../../components/ui/DateTimePicker';
@@ -25,14 +20,13 @@ import Select from '../../components/ui/Select';
 import ProgressIndicator from '../../components/ui/ProgressIndicator';
 
 // Define types locally to avoid import issues
-enum ReportCategory {
-  BRIBERY = 'bribery',
-  EMBEZZLEMENT = 'embezzlement',
-  FRAUD = 'fraud',
-  ABUSE_OF_POWER = 'abuse_of_power',
-  NEPOTISM = 'nepotism',
-  OTHER = 'other'
-}
+type ReportCategory = 
+  | 'bribery'
+  | 'embezzlement'
+  | 'fraud'
+  | 'abuse_of_power'
+  | 'nepotism'
+  | 'other';
 
 interface Location {
   address: string;
@@ -69,10 +63,6 @@ const ReportSubmission: React.FC = () => {
   const [showMap, setShowMap] = useState(false);
   const [currentStep, setCurrentStep] = useState('basic');
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-
-  const navigate = useNavigate();
-
-
 
   const {
     register,
@@ -190,9 +180,7 @@ const ReportSubmission: React.FC = () => {
       const response = await reportsApi.createReport(formData);
 
       if (response.success) {
-        navigate('/profile/reports', {
-          state: { message: 'Report submitted successfully!' }
-        });
+        window.location.href = '/profile/reports';
       } else {
         setError(response.error || 'Failed to submit report');
       }
@@ -218,7 +206,7 @@ const ReportSubmission: React.FC = () => {
         </div>
 
         {/* Progress Indicator */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <div className="progress-indicator-wrapper">
           <ProgressIndicator
             steps={formSteps}
             currentStep={currentStep}
@@ -229,14 +217,14 @@ const ReportSubmission: React.FC = () => {
         {/* Form */}
         <form id="report-form" onSubmit={handleSubmit(onSubmit)} className="form-body">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
+            <div className="info-box info-box-danger">
               {error}
             </div>
           )}
 
           {/* Anonymous Reporting Toggle */}
           <div className="form-section">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="info-box info-box-blue">
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -359,9 +347,10 @@ const ReportSubmission: React.FC = () => {
                   hint="When did the incident occur?"
                 >
                   <DateTimePicker
-                    {...register('incidentDate', { required: 'Incident date is required' })}
                     type="date"
                     max={new Date().toISOString().split('T')[0]}
+                    min="2020-01-01"
+                    value={watch('incidentDate') || ''}
                     onChange={(value) => setValue('incidentDate', value)}
                   />
                 </FormField>
@@ -372,8 +361,10 @@ const ReportSubmission: React.FC = () => {
                   hint="Approximate time when the incident occurred (optional)"
                 >
                   <DateTimePicker
-                    {...register('incidentTime')}
                     type="time"
+                    min="00:00"
+                    max="23:59"
+                    value={watch('incidentTime') || ''}
                     onChange={(value) => setValue('incidentTime', value)}
                   />
                 </FormField>
@@ -454,7 +445,7 @@ const ReportSubmission: React.FC = () => {
                   </button>
 
                   {showMap && (
-                    <div className="border border-gray-300 rounded-md p-4 bg-gray-50">
+                    <div className="map-container">
                       <p className="text-sm text-gray-600 mb-3">
                         Click on the map to pinpoint the exact location where the incident occurred.
                         This helps authorities respond more effectively.
@@ -464,7 +455,7 @@ const ReportSubmission: React.FC = () => {
                         height="400px"
                       />
                       {selectedLocation && (
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="info-box info-box-blue mt-3">
                           <p className="text-sm font-medium text-blue-900">Selected Location:</p>
                           <p className="text-xs text-blue-700 mt-1">
                             Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
@@ -501,12 +492,12 @@ const ReportSubmission: React.FC = () => {
                 hint="Accepted formats: Images (JPG, PNG), Videos (MP4, MOV), Documents (PDF). Max file size: 10MB each."
                 className="col-span-full"
               >
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                <div className="file-upload-zone">
                   <Camera className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                   <div className="space-y-2">
                     <label
                       htmlFor="file-upload"
-                      className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="btn btn-primary"
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Choose Files
@@ -535,7 +526,7 @@ const ReportSubmission: React.FC = () => {
                   <h4 className="text-sm font-medium text-gray-900">Selected Files ({selectedFiles.length})</h4>
                   <div className="grid grid-cols-1 gap-3">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md border">
+                      <div key={index} className="file-item">
                         <div className="flex items-center space-x-3">
                           <div className="flex-shrink-0">
                             {file.type.startsWith('image/') ? (

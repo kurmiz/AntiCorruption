@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import '../../styles/sidebar.css';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Home,
@@ -15,11 +16,7 @@ import {
 } from 'lucide-react';
 
 // Define types locally to avoid import issues
-enum UserRole {
-  USER = 'user',
-  POLICE = 'police',
-  ADMIN = 'admin'
-}
+type UserRole = 'user' | 'police' | 'admin';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -38,55 +35,55 @@ const navigationItems: NavItem[] = [
     label: 'Dashboard',
     path: '/dashboard',
     icon: Home,
-    roles: [UserRole.USER, UserRole.POLICE, UserRole.ADMIN]
+    roles: ['user', 'police', 'admin']
   },
   {
     label: 'Submit Report',
     path: '/reports/new',
     icon: AlertTriangle,
-    roles: [UserRole.USER]
+    roles: ['user']
   },
   {
     label: 'My Reports',
     path: '/profile/reports',
     icon: FileText,
-    roles: [UserRole.USER]
+    roles: ['user']
   },
   {
     label: 'All Reports',
     path: '/reports',
     icon: FileText,
-    roles: [UserRole.POLICE, UserRole.ADMIN]
+    roles: ['police', 'admin']
   },
   {
     label: 'Messages',
     path: '/messages',
     icon: MessageSquare,
-    roles: [UserRole.USER, UserRole.POLICE, UserRole.ADMIN]
+    roles: ['user', 'police', 'admin']
   },
   {
     label: 'Statistics',
     path: '/statistics',
     icon: BarChart3,
-    roles: [UserRole.POLICE, UserRole.ADMIN]
+    roles: ['police', 'admin']
   },
   {
     label: 'User Management',
     path: '/admin/users',
     icon: Users,
-    roles: [UserRole.ADMIN]
+    roles: ['admin']
   },
   {
     label: 'Profile',
     path: '/profile',
     icon: User,
-    roles: [UserRole.USER, UserRole.POLICE, UserRole.ADMIN]
+    roles: ['user', 'police', 'admin']
   },
   {
     label: 'Settings',
     path: '/admin/settings',
     icon: Settings,
-    roles: [UserRole.ADMIN]
+    roles: ['admin']
   }
 ];
 
@@ -110,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          className="fixed inset-0 z-40 sidebar-backdrop lg:hidden"
           onClick={onClose}
         />
       )}

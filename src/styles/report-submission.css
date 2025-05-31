@@ -1,0 +1,393 @@
+/* Report Submission Form */
+.modern-form {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Header */
+.form-header {
+  padding: 2rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.form-header-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.form-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Form Sections */
+.form-body {
+  padding: 1.5rem;
+}
+
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.form-section-header {
+  margin-bottom: 1.5rem;
+}
+
+.form-section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-section-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 640px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Form Fields */
+.form-field {
+  margin-bottom: 1rem;
+}
+
+.form-field label {
+  display: block;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.form-field input[type="text"],
+.form-field input[type="date"],
+.form-field input[type="time"],
+.form-field textarea {
+  width: 100%;
+  padding: 0.625rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 0.375rem;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+}
+
+.form-field input[type="text"]:focus,
+.form-field input[type="date"]:focus,
+.form-field input[type="time"]:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-field-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.25rem;
+}
+
+.form-field-error {
+  font-size: 0.75rem;
+  color: var(--color-danger);
+  margin-top: 0.25rem;
+}
+
+/* Form Footer */
+.form-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--border-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  border: 1px solid var(--color-primary-dark);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: var(--text-inverse);
+  border: 1px solid var(--color-danger-dark);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--color-danger-hover);
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+.btn-loading {
+  position: relative;
+  color: transparent;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--text-inverse);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+/* Info Boxes */
+.info-box {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.info-box-blue {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.info-box-yellow {
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning);
+  color: var(--color-warning-dark);
+}
+
+/* Progress Indicator Wrapper */
+.progress-indicator-wrapper {
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+/* Map Container */
+.map-container {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.5rem;
+}
+
+.map-container p {
+  color: var(--text-secondary);
+}
+
+/* File Upload Zone */
+.file-upload-zone {
+  border: 2px dashed var(--border-primary);
+  border-radius: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+  transition: border-color 0.2s ease;
+  background: var(--bg-secondary);
+}
+
+.file-upload-zone:hover {
+  border-color: var(--border-hover);
+}
+
+.file-upload-zone .text-gray-400 {
+  color: var(--text-tertiary);
+}
+
+.file-upload-zone .text-gray-500 {
+  color: var(--text-secondary);
+}
+
+/* File Item */
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 0.5rem;
+}
+
+.file-item p {
+  color: var(--text-primary);
+}
+
+.file-item .text-gray-500 {
+  color: var(--text-secondary);
+}
+
+/* Dark Mode Overrides */
+:root[data-theme="dark"] .modern-form {
+  background: var(--bg-primary);
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .form-header {
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .form-header-icon {
+  background: var(--color-primary-dark);
+}
+
+:root[data-theme="dark"] .progress-indicator-wrapper {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .form-field input[type="text"],
+:root[data-theme="dark"] .form-field input[type="date"],
+:root[data-theme="dark"] .form-field input[type="time"],
+:root[data-theme="dark"] .form-field textarea {
+  background: var(--bg-secondary);
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .form-field input[type="text"]:focus,
+:root[data-theme="dark"] .form-field input[type="date"]:focus,
+:root[data-theme="dark"] .form-field input[type="time"]:focus,
+:root[data-theme="dark"] .form-field textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-dark);
+}
+
+:root[data-theme="dark"] .map-container {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .map-container p {
+  color: var(--text-tertiary);
+}
+
+:root[data-theme="dark"] .file-upload-zone {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .file-upload-zone:hover {
+  border-color: var(--border-hover);
+}
+
+:root[data-theme="dark"] .file-item {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+}
+
+:root[data-theme="dark"] .file-item p {
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .btn-secondary {
+  background: var(--bg-tertiary);
+  border-color: var(--border-secondary);
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+:root[data-theme="dark"] .info-box-blue {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary);
+  color: var(--color-primary-light);
+}
+
+:root[data-theme="dark"] .info-box-yellow {
+  background: var(--color-warning-dark);
+  border-color: var(--color-warning);
+  color: var(--color-warning-light);
+}
+
+:root[data-theme="dark"] .info-box-danger {
+  background: var(--color-danger-dark);
+  border-color: var(--color-danger);
+  color: var(--color-danger-light);
+}
+
+/* Animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

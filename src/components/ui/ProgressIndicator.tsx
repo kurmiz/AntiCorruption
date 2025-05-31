@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
+import '../../styles/progress-indicator.css';
 
 interface Step {
   id: string;

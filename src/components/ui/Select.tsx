@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface SelectOption {
@@ -20,7 +20,7 @@ interface SelectProps {
   searchable?: boolean;
 }
 
-const Select = forwardRef<HTMLSelectElement, SelectProps>(({
+const Select = forwardRef<HTMLInputElement, SelectProps>(({
   options,
   value,
   onChange,
@@ -52,24 +52,15 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(({
 
   return (
     <div className="select-container">
-      {/* Hidden native select for form submission */}
-      <select
+      <input
+        type="hidden"
         ref={ref}
         value={value || ''}
-        onChange={(e) => onChange?.(e.target.value)}
-        className="sr-only"
         id={id}
         required={required}
         disabled={disabled}
         {...props}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      />
 
       {/* Custom select UI */}
       <div className={`select-wrapper ${disabled ? 'disabled' : ''} ${className}`}>
