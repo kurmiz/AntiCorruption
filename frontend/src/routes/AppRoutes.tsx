@@ -41,18 +41,27 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
+  console.log('ProtectedRoute: Evaluating access. isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'User:', user);
+
   if (isLoading) {
+    console.log('ProtectedRoute: isLoading is true, rendering LoadingSpinner.');
     return <LoadingSpinner />;
   }
 
   if (!isAuthenticated) {
+    console.log('ProtectedRoute: Not authenticated, redirecting to /login.');
     return <Navigate to="/login" replace />;
   }
 
+  // User is authenticated here
+  console.log('ProtectedRoute: Authenticated. User role:', user?.role);
+
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
+    console.log(`ProtectedRoute: Role not allowed. User role: ${user.role}, Allowed roles: ${allowedRoles}. Redirecting to /unauthorized.`);
     return <Navigate to="/unauthorized" replace />;
   }
 
+  console.log('ProtectedRoute: Access granted.');
   return <>{children}</>;
 };
 

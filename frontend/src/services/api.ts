@@ -8,7 +8,8 @@ import type {
   Statistics,
   DashboardData,
   PaginatedResponse,
-  ApiResponse as GlobalApiResponse // Use a more specific ApiResponse or rename local one
+  ApiResponse as GlobalApiResponse, // Use a more specific ApiResponse or rename local one
+  RegisterForm // Import RegisterForm
 } from '../types'; // Import types as type-only
 
 // Define basic types locally - consider using GlobalApiResponse from ../types
@@ -143,14 +144,22 @@ export const authApi = {
     );
   },
 
-  register: async (userData: any): Promise<ApiResponse<any>> => {
+  register: async (userData: RegisterForm): Promise<GlobalApiResponse<any>> => { // Changed userData type to RegisterForm
     const apiService = new ApiService();
+    // Transform data to match backend expectations
+    const payload = {
+      email: userData.email,
+      password: userData.password,
+      name: `${userData.firstName} ${userData.lastName}`,
+      role: userData.role,
+      // phone: userData.phone, // If phone is to be sent, ensure backend handles it and User model has phone
+    };
     return apiService['handleRequest'](
-      apiService['api'].post('/auth/signup', userData)
+      apiService['api'].post('/auth/signup', payload)
     );
   },
 
-  getCurrentUser: async (): Promise<ApiResponse<any>> => {
+  getCurrentUser: async (): Promise<GlobalApiResponse<any>> => { // Changed to GlobalApiResponse for consistency
     const apiService = new ApiService();
     return apiService['handleRequest'](
       apiService['api'].get('/auth/me')

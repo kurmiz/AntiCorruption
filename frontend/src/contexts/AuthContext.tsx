@@ -1,14 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react'; // Import ReactNode as type
 import { authApi } from '../services/api';
+import type { UserRole } from '../types'; // Import UserRole from global types
 
-// Define types locally to avoid import issues
-enum UserRole {
-  USER = 'user',
-  POLICE = 'police',
-  ADMIN = 'admin'
-}
+// Removed local UserRole enum
 
-interface User {
+interface User { // This User interface is also defined in ../types. Consider importing.
   id: string;
   email: string;
   firstName: string;
@@ -65,21 +62,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('AuthContext useEffect: Initializing auth...');
       const token = localStorage.getItem('auth-token');
+      console.log('AuthContext useEffect: Token from localStorage:', token);
       if (token) {
         try {
+          console.log('AuthContext useEffect: Attempting to get current user with token.');
           const response = await authApi.getCurrentUser();
+          console.log('AuthContext useEffect: Response from getCurrentUser:', response);
           if (response.success && response.data) {
             setUser(response.data);
+            console.log('AuthContext useEffect: User set from token:', response.data);
           } else {
+            console.log('AuthContext useEffect: getCurrentUser failed or no data, removing token.');
             localStorage.removeItem('auth-token');
+            setUser(null); // Explicitly set user to null
           }
         } catch (error) {
-          console.error('Failed to initialize auth:', error);
+          console.error('AuthContext useEffect: Error initializing auth:', error);
           localStorage.removeItem('auth-token');
+          setUser(null); // Explicitly set user to null
         }
+      } else {
+        console.log('AuthContext useEffect: No token found in localStorage.');
       }
       setIsLoading(false);
+      console.log('AuthContext useEffect: Finished initialization. isLoading:', false);
     };
 
     initializeAuth();
@@ -89,23 +97,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       const response = await authApi.login(credentials);
+      console.log('AuthContext login: Raw response from authApi.login:', JSON.stringify(response, null, 2)); // Log the whole response
 
-      if (response.success && response.data) {
-        const { user: userData, token } = response.data;
+      if (response.success && response.data && response.data.data) { // Added check for response.data.data
+        console.log('AuthContext login: response.data before destructuring:', JSON.stringify(response.data, null, 2)); // Log response.data
+        const { user: userData, token } = response.data.data; // Correctly access nested data object
         localStorage.setItem('auth-token', token);
         setUser(userData);
+        console.log('AuthContext: User set after login:', userData);
+        // Immediately after setting user, isAuthenticated should be true if userData is not null
+        console.log('AuthContext: isAuthenticated after login (expected true):', !!userData);
       }
-
+      // Ensure isLoading is false before returning
+      setIsLoading(false);
+      console.log('AuthContext: login function returning. isLoading:', false, 'Response:', response);
       return response;
     } catch (error) {
+      setIsLoading(false); // Ensure isLoading is false on error too
+      console.error('Login error in AuthContext:', error);
       console.error('Login error:', error);
       return {
         success: false,
         error: 'Login failed. Please try again.'
       };
-    } finally {
-      setIsLoading(false);
     }
+    // finally { // setIsLoading(false) is now handled in try and catch
+      // setIsLoading(false);
+    // }
   };
 
   const register = async (userData: RegisterForm): Promise<ApiResponse<{ user: User; token: string }>> => {
@@ -117,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const { user: newUser, token } = response.data;
         localStorage.setItem('auth-token', token);
         setUser(newUser);
+        console.log('AuthContext: User set after registration:', newUser); // For debugging redirect
       }
 
       return response;

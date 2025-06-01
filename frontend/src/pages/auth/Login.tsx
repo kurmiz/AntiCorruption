@@ -28,7 +28,7 @@ const Login: React.FC = () => {
   } = useForm<LoginForm>();
 
   const onSubmit = async (data: LoginForm) => {
-    console.log('Login attempt with data:', data);
+    // console.log('Login attempt with data:', data); // Removed for security
     try {
       setIsLoading(true);
       setError('');

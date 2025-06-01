@@ -41,28 +41,32 @@ const Register: React.FC = () => {
       setIsLoading(true);
       setError('');
 
-      console.log('Form data:', data);
+      // console.log('Form data:', data); // Removed for security
 
-      // Prepare the request data
-      const requestData = {
-        email: data.email,
-        password: data.password,
-        name: `${data.firstName} ${data.lastName}`,
-        role: data.role, // Use the role from the form data
-        // phone: data.phone // Temporarily removed phone
-      };
+      // Prepare the request data - this transformation should ideally happen closer to the API call
+      // For now, we pass the original 'data' which is of type RegisterForm
+      // const requestData = {
+      //   email: data.email,
+      //   password: data.password,
+      //   name: `${data.firstName} ${data.lastName}`,
+      //   role: data.role,
+      // };
 
-      console.log('Request data:', requestData);
+      // console.log('Request data to context:', data); // For debugging
 
       // Assuming registerUser in AuthContext handles the API call
-      const response = await registerUser(requestData);
+      // and expects RegisterForm type
+      const response = await registerUser(data);
 
       if (response.success) {
-        navigate('/dashboard');
+        console.log('Registration successful, preparing to navigate...'); // For debugging redirect
+        setTimeout(() => { // For debugging redirect
+          navigate('/dashboard');
+        }, 100);
       } else {
-        setError(response.error || 'Registration failed');
+        setError(response.message || response.error || 'Registration failed'); // Added response.message
       }
-    } catch (err) {
+    } catch (err: any) { // Added type for err
       setError('Unable to connect to the server. Please try again later.');
       console.error('Registration error:', err);
     } finally {
