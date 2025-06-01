@@ -43,6 +43,7 @@ interface ApiResponse<T> {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isInitialized: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginForm) => Promise<ApiResponse<{ user: User; token: string }>>;
   register: (userData: RegisterForm) => Promise<ApiResponse<{ user: User; token: string }>>;
@@ -59,35 +60,39 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const initializeAuth = async () => {
-      console.log('AuthContext useEffect: Initializing auth...');
-      const token = localStorage.getItem('auth-token');
-      console.log('AuthContext useEffect: Token from localStorage:', token);
-      if (token) {
-        try {
-          console.log('AuthContext useEffect: Attempting to get current user with token.');
-          const response = await authApi.getCurrentUser();
-          console.log('AuthContext useEffect: Response from getCurrentUser:', response);
-          if (response.success && response.data) {
-            setUser(response.data);
-            console.log('AuthContext useEffect: User set from token:', response.data);
-          } else {
-            console.log('AuthContext useEffect: getCurrentUser failed or no data, removing token.');
-            localStorage.removeItem('auth-token');
-            setUser(null); // Explicitly set user to null
-          }
-        } catch (error) {
-          console.error('AuthContext useEffect: Error initializing auth:', error);
-          localStorage.removeItem('auth-token');
-          setUser(null); // Explicitly set user to null
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('auth-token');
+
+        if (!token) {
+          console.log('No token found, setting initialized state');
+          setUser(null);
+          return;
         }
-      } else {
-        console.log('AuthContext useEffect: No token found in localStorage.');
+
+        const response = await authApi.getCurrentUser();
+        console.log('getCurrentUser response:', response);
+        
+        if (response.success && response.data) {
+          console.log('User authenticated:', response.data.role);
+          setUser(response.data);
+        } else {
+          console.log('Token invalid, clearing auth state');
+          localStorage.removeItem('auth-token');
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        localStorage.removeItem('auth-token');
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+        setIsInitialized(true);
       }
-      setIsLoading(false);
-      console.log('AuthContext useEffect: Finished initialization. isLoading:', false);
     };
 
     initializeAuth();
@@ -99,9 +104,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authApi.login(credentials);
       console.log('AuthContext login: Raw response from authApi.login:', JSON.stringify(response, null, 2)); // Log the whole response
 
-      if (response.success && response.data && response.data.data) { // Added check for response.data.data
-        console.log('AuthContext login: response.data before destructuring:', JSON.stringify(response.data, null, 2)); // Log response.data
-        const { user: userData, token } = response.data.data; // Correctly access nested data object
+      if (response.success && response.data && response.data.data) {
+        const { user: userData, token } = response.data.data;
+        console.log('Login successful - user data:', userData);
         localStorage.setItem('auth-token', token);
         setUser(userData);
         console.log('AuthContext: User set after login:', userData);
@@ -186,6 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     isLoading,
+    isInitialized,
     isAuthenticated: !!user,
     login,
     register,

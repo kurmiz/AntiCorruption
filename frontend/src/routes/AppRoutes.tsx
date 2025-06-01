@@ -39,29 +39,31 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading, isInitialized } = useAuth();
 
-  console.log('ProtectedRoute: Evaluating access. isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'User:', user);
-
-  if (isLoading) {
-    console.log('ProtectedRoute: isLoading is true, rendering LoadingSpinner.');
+  // Wait for auth to initialize before making any decisions
+  if (!isInitialized || isLoading) {
     return <LoadingSpinner />;
   }
 
+  // After initialization, if not authenticated, redirect to login
   if (!isAuthenticated) {
-    console.log('ProtectedRoute: Not authenticated, redirecting to /login.');
     return <Navigate to="/login" replace />;
   }
 
-  // User is authenticated here
-  console.log('ProtectedRoute: Authenticated. User role:', user?.role);
+  // At this point we know user is authenticated and auth is initialized
+  if (!user) {
+    // This should never happen if isAuthenticated is true
+    console.error('Protected route: User is authenticated but user object is null');
+    return <Navigate to="/login" replace />;
+  }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    console.log(`ProtectedRoute: Role not allowed. User role: ${user.role}, Allowed roles: ${allowedRoles}. Redirecting to /unauthorized.`);
+  // Check role-based access
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  console.log('ProtectedRoute: Access granted.');
+  // All checks passed, render the protected content
   return <>{children}</>;
 };
 

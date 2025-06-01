@@ -124,7 +124,7 @@ class ApiService {
       const response = await request;
       return {
         success: true,
-        data: response.data,
+        data: response.data as T, // Cast response data to expected type
       };
     } catch (error: any) {
       return {
@@ -159,9 +159,9 @@ export const authApi = {
     );
   },
 
-  getCurrentUser: async (): Promise<GlobalApiResponse<any>> => { // Changed to GlobalApiResponse for consistency
+  getCurrentUser: async (): Promise<GlobalApiResponse<User>> => {
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<User>(
       apiService['api'].get('/auth/me')
     );
   },
