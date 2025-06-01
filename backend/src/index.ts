@@ -4,6 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { logger } from './utils/logger';
+import { connectDB } from './config/database'; // Import connectDB
 import authRoutes from './routes/auth';
 
 interface CustomError extends Error {
@@ -58,6 +59,9 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
+    // Connect to Database
+    await connectDB();
+
     // Start listening
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);

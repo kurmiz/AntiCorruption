@@ -1,7 +1,18 @@
 import axios from 'axios';
+import type { AxiosInstance } from 'axios'; // Import AxiosInstance as type
+import type {
+  User,
+  Report,
+  Message,
+  MessageForm,
+  Statistics,
+  DashboardData,
+  PaginatedResponse,
+  ApiResponse as GlobalApiResponse // Use a more specific ApiResponse or rename local one
+} from '../types'; // Import types as type-only
 
-// Define basic types locally to avoid import issues
-interface ApiResponse<T> {
+// Define basic types locally - consider using GlobalApiResponse from ../types
+interface ApiResponse<T> { // This could be replaced by GlobalApiResponse
   success: boolean;
   data?: T;
   message?: string;
@@ -71,11 +82,11 @@ const mockUsers = [
 const mockDelay = (ms: number = 1000) => new Promise(resolve => setTimeout(resolve, ms));
 
 class ApiService {
-  private api: typeof axios;
+  private api: AxiosInstance; // Changed type to AxiosInstance
 
   constructor() {
     this.api = axios.create({
-      baseURL: 'http://localhost:5000/api',
+      baseURL: '/api', // This will be proxied by Vite dev server
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +110,7 @@ class ApiService {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('token');
+          localStorage.removeItem('auth-token'); // Corrected token key
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -243,19 +254,23 @@ export const reportsApi = {
 
     // Append text fields
     Object.entries(reportData).forEach(([key, value]) => {
-      if (key !== 'media' && value !== undefined) {
-        formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+      if (key !== 'media' && value !== undefined && value !== null) {
+        if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value as string | Blob); // Type assertion
+        }
       }
     });
 
     // Append media files
-    if (reportData.media) {
-      reportData.media.forEach((file) => {
+    if (reportData.media && Array.isArray(reportData.media)) {
+      reportData.media.forEach((file: File) => { // Added File type
         formData.append('media', file);
       });
     }
 
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<Report>( // Added Report type
       apiService['api'].post('/reports', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
@@ -286,38 +301,42 @@ export const reportsApi = {
 
 // Messages API
 export const messagesApi = {
-  getMessages: async (reportId?: string): Promise<ApiResponse<Message[]>> => {
+  getMessages: async (reportId?: string): Promise<GlobalApiResponse<Message[]>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
     const url = reportId ? `/messages?reportId=${reportId}` : '/messages';
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<Message[]>( // Added Message[] type
       apiService['api'].get(url)
     );
   },
 
-  sendMessage: async (messageData: MessageForm): Promise<ApiResponse<Message>> => {
+  sendMessage: async (messageData: MessageForm): Promise<GlobalApiResponse<Message>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
     const formData = new FormData();
 
     Object.entries(messageData).forEach(([key, value]) => {
-      if (key !== 'attachments' && value !== undefined) {
-        formData.append(key, value);
+      if (key !== 'attachments' && value !== undefined && value !== null) {
+         if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value as string | Blob); // Type assertion
+        }
       }
     });
 
-    if (messageData.attachments) {
-      messageData.attachments.forEach((file) => {
+    if (messageData.attachments && Array.isArray(messageData.attachments)) {
+      messageData.attachments.forEach((file: File) => { // Added File type
         formData.append('attachments', file);
       });
     }
 
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<Message>( // Added Message type
       apiService['api'].post('/messages', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
     );
   },
 
-  markAsRead: async (messageId: string): Promise<ApiResponse<{ message: string }>> => {
+  markAsRead: async (messageId: string): Promise<GlobalApiResponse<{ message: string }>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
     return apiService['handleRequest'](
       apiService['api'].put(`/messages/${messageId}/read`)
@@ -327,16 +346,16 @@ export const messagesApi = {
 
 // Statistics API
 export const statisticsApi = {
-  getStatistics: async (): Promise<ApiResponse<Statistics>> => {
+  getStatistics: async (): Promise<GlobalApiResponse<Statistics>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<Statistics>( // Added Statistics type
       apiService['api'].get('/statistics')
     );
   },
 
-  getDashboardData: async (): Promise<ApiResponse<DashboardData>> => {
+  getDashboardData: async (): Promise<GlobalApiResponse<DashboardData>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<DashboardData>( // Added DashboardData type
       apiService['api'].get('/dashboard')
     );
   },
@@ -344,28 +363,28 @@ export const statisticsApi = {
 
 // Users API (Admin only)
 export const usersApi = {
-  getUsers: async (page = 1, limit = 10): Promise<ApiResponse<PaginatedResponse<User>>> => {
+  getUsers: async (page = 1, limit = 10): Promise<GlobalApiResponse<PaginatedResponse<User>>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<PaginatedResponse<User>>( // Added PaginatedResponse<User> type
       apiService['api'].get(`/users?page=${page}&limit=${limit}`)
     );
   },
 
-  getUser: async (id: string): Promise<ApiResponse<User>> => {
+  getUser: async (id: string): Promise<GlobalApiResponse<User>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<User>( // Added User type
       apiService['api'].get(`/users/${id}`)
     );
   },
 
-  updateUser: async (id: string, userData: Partial<User>): Promise<ApiResponse<User>> => {
+  updateUser: async (id: string, userData: Partial<User>): Promise<GlobalApiResponse<User>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    return apiService['handleRequest']<User>( // Added User type
       apiService['api'].put(`/users/${id}`, userData)
     );
   },
 
-  deleteUser: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+  deleteUser: async (id: string): Promise<GlobalApiResponse<{ message: string }>> => { // Used GlobalApiResponse
     const apiService = new ApiService();
     return apiService['handleRequest'](
       apiService['api'].delete(`/users/${id}`)

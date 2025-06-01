@@ -48,12 +48,13 @@ const Register: React.FC = () => {
         email: data.email,
         password: data.password,
         name: `${data.firstName} ${data.lastName}`,
-        role: 'citizen', // Default to citizen role for now
-        phone: data.phone
+        role: data.role, // Use the role from the form data
+        // phone: data.phone // Temporarily removed phone
       };
 
       console.log('Request data:', requestData);
 
+      // Assuming registerUser in AuthContext handles the API call
       const response = await registerUser(requestData);
 
       if (response.success) {

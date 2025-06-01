@@ -33,28 +33,19 @@ const Login: React.FC = () => {
       setIsLoading(true);
       setError('');
 
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      console.log('Login response:', result);
+      // Use the login function from AuthContext
+      const result = await login(data); // login from useAuth() now makes the API call
+      
+      console.log('Login response from context:', result);
 
       if (result.success && result.data) {
-        // Store the token
-        localStorage.setItem('auth-token', result.data.token);
-        await login(result.data.user);
+        // Token and user state are handled by AuthContext's login function
         navigate('/dashboard');
       } else {
-        setError(result.message || 'Login failed');
+        setError(result.message || result.error || 'Login failed');
       }
-    } catch (err) {
-      setError('Unable to connect to the server. Please try again later.');
+    } catch (err: any) { // Catch any type for broader error handling
+      setError(err.message || 'Unable to connect to the server. Please try again later.');
       console.error('Login error:', err);
     } finally {
       setIsLoading(false);

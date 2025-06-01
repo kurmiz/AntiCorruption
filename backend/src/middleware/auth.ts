@@ -1,46 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
+import User, { IUser } from '../models/User'; // Import User model and IUser interface
 
-// Temporary in-memory user storage
-export const users: InMemoryUser[] = [
-  {
-    _id: '1',
-    email: 'admin@anticorruption.com',
-    password: 'admin123',
-    name: 'Admin User',
-    role: 'admin',
-    isVerified: true
-  },
-  {
-    _id: '2',
-    email: 'police@anticorruption.com',
-    password: 'police123',
-    name: 'Police Officer',
-    role: 'police',
-    isVerified: true
-  },
-  {
-    _id: '3',
-    email: 'user@anticorruption.com',
-    password: 'user123',
-    name: 'John Citizen',
-    role: 'citizen',
-    isVerified: true
-  }
-];
-
-export type InMemoryUser = {
-  _id: string;
-  email: string;
-  password: string;
-  name: string;
-  role: 'citizen' | 'police' | 'admin';
-  isVerified: boolean;
-};
+// Removed in-memory user storage and InMemoryUser type
 
 export interface AuthRequest extends Request {
-  user?: InMemoryUser;
+  user?: IUser | null; // Updated to use IUser
 }
 
 interface CustomJwtPayload {
@@ -51,7 +17,7 @@ interface CustomJwtPayload {
 declare global {
   namespace Express {
     interface Request {
-      user?: InMemoryUser;
+      user?: IUser | null; // Updated to use IUser
     }
   }
 }
@@ -73,12 +39,13 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as CustomJwtPayload;
-      const user = users.find(u => u._id === decoded.userId);
+      // Fetch user from MongoDB
+      const user = await User.findById(decoded.userId).select('-password'); // Exclude password
       
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'User not found',
+          message: 'User not found or token invalid', // More generic message
         });
       }
 
@@ -109,7 +76,8 @@ export const authorize = (...roles: ('citizen' | 'police' | 'admin')[]) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    // req.user.role will be of type 'citizen' | 'police' | 'admin' from IUser
+    if (!roles.includes(req.user.role as 'citizen' | 'police' | 'admin')) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to perform this action',

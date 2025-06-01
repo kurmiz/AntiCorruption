@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs'; // Added bcryptjs
 import { logger } from '../utils/logger';
-import { AuthRequest, users, InMemoryUser } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth'; // Removed users, InMemoryUser
+import User, { IUser } from '../models/User'; // Added User model and IUser interface
 
 
 const generateToken = (userId: string, role: 'citizen' | 'police' | 'admin'): string => {
@@ -20,7 +22,7 @@ export const signup = async (req: Request, res: Response) => {
     const { email, password, name } = req.body;
 
     // Check if user already exists
-    const existingUser = users.find(u => u.email === email);
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -28,31 +30,35 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
 
-    // Create new user
-    const newUser: InMemoryUser = {
-      _id: String(users.length + 1),
-      email,
-      password,
-      name,
-      role: 'citizen',
-      isVerified: false
-    };
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    users.push(newUser);
+    // Create new user
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      name,
+      role: 'citizen', // Default role, can be adjusted
+      isVerified: false // Default verification status
+    });
+
+    await newUser.save();
 
     // Generate token
-    const token = generateToken(newUser._id, newUser.role);
+    const token = generateToken(newUser._id.toString(), newUser.role);
 
     // Transform user data to match frontend expectations
     const userResponse = {
-      id: newUser._id,
+      id: newUser._id.toString(),
       email: newUser.email,
       firstName: newUser.name.split(' ')[0] || '',
       lastName: newUser.name.split(' ').slice(1).join(' ') || '',
       role: newUser.role,
       isVerified: newUser.isVerified,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      // Assuming User model has timestamps: true
+      createdAt: newUser.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: newUser.updatedAt?.toISOString() || new Date().toISOString()
     };
 
     res.status(201).json({
@@ -76,7 +82,7 @@ export const login = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     // Find user
-    const user = users.find(u => u.email === email && u.password === password);
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -84,19 +90,28 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password'
+      });
+    }
+
     // Generate token
-    const token = generateToken(user._id, user.role);
+    const token = generateToken(user._id.toString(), user.role);
 
     // Transform user data to match frontend expectations
     const userResponse = {
-      id: user._id,
+      id: user._id.toString(),
       email: user.email,
       firstName: user.name.split(' ')[0] || '',
       lastName: user.name.split(' ').slice(1).join(' ') || '',
       role: user.role,
       isVerified: user.isVerified,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString() || new Date().toISOString()
     };
 
     res.json({
@@ -117,8 +132,15 @@ export const login = async (req: Request, res: Response) => {
 
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user?._id;
-    const user = users.find(u => u._id === userId);
+    const userId = req.user?._id; // This comes from the JWT token after protect middleware
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID not found in token'
+      });
+    }
+    
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({
@@ -129,14 +151,14 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 
     // Transform user data to match frontend expectations
     const userResponse = {
-      id: user._id,
+      id: user._id.toString(),
       email: user.email,
       firstName: user.name.split(' ')[0] || '',
       lastName: user.name.split(' ').slice(1).join(' ') || '',
       role: user.role,
       isVerified: user.isVerified,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: user.createdAt?.toISOString() || new Date().toISOString(),
+      updatedAt: user.updatedAt?.toISOString() || new Date().toISOString()
     };
 
     res.json({
