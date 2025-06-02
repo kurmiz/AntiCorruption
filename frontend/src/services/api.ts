@@ -119,17 +119,51 @@ class ApiService {
     );
   }
 
-  private async handleRequest<T>(request: Promise<any>): Promise<ApiResponse<T>> {
+  private async handleRequest<T>(request: Promise<any>): Promise<GlobalApiResponse<T>> { // Ensure using GlobalApiResponse
     try {
-      const response = await request;
-      return {
-        success: true,
-        data: response.data as T, // Cast response data to expected type
-      };
-    } catch (error: any) {
+      const axiosResponse = await request; // This is the AxiosResponse
+      const backendResponseBody = axiosResponse.data; // This is the actual body string/object from the backend
+
+      console.log('ApiService.handleRequest: Raw Axios response.data (backendResponseBody):', JSON.stringify(backendResponseBody, null, 2));
+
+      // Check if backendResponseBody itself indicates success and contains the actual payload in a 'data' field
+      if (backendResponseBody && typeof backendResponseBody.success === 'boolean') {
+        // Handles structures like:
+        // { success: true, data: ACTUAL_PAYLOAD, message?: "..." }
+        // { success: false, message: "error msg", error?: "...", data?: problematic_data }
+        console.log('ApiService.handleRequest: Backend response has a "success" flag.');
+        return {
+          success: backendResponseBody.success,
+          // If success, data is T. If not, data might be error details or undefined.
+          data: backendResponseBody.success ? (backendResponseBody.data as T) : (backendResponseBody.data as T | undefined),
+          message: backendResponseBody.message,
+          error: backendResponseBody.success ? undefined : (backendResponseBody.error || backendResponseBody.message)
+        };
+      } else if (axiosResponse.status >= 200 && axiosResponse.status < 300) {
+        // If no 'success' flag in backendResponseBody, but HTTP status is success,
+        // assume backendResponseBody IS the actual payload.
+        console.log('ApiService.handleRequest: Backend response is direct payload (HTTP success, no wrapper).');
+        return {
+          success: true,
+          data: backendResponseBody as T,
+        };
+      }
+      
+      // If HTTP status indicates error (but wasn't caught by catch), or structure is unexpected even with 2xx
+      console.log('ApiService.handleRequest: Unexpected response structure or HTTP error not caught by catch block. Status:', axiosResponse.status);
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'An error occurred',
+        error: `Unexpected API response format. HTTP Status: ${axiosResponse.status}`,
+        // data: backendResponseBody // Optionally include for debugging
+      };
+
+    } catch (error: any) {
+      console.error('ApiService: Error in HTTP request execution:', error);
+      const backendError = error.response?.data; // Error response body from backend
+      return {
+        success: false,
+        error: backendError?.message || backendError?.error || error.message || 'An API error occurred during request execution.',
+        data: backendError // Optionally include error data from backend
       };
     }
   }
@@ -161,9 +195,12 @@ export const authApi = {
 
   getCurrentUser: async (): Promise<GlobalApiResponse<User>> => {
     const apiService = new ApiService();
-    return apiService['handleRequest']<User>(
+    console.log('Calling getCurrentUser API...');
+    const response = await apiService['handleRequest']<User>(
       apiService['api'].get('/auth/me')
     );
+    console.log('getCurrentUser API response:', JSON.stringify(response, null, 2));
+    return response;
   },
 
   updateProfile: async (userData: any): Promise<ApiResponse<any>> => {

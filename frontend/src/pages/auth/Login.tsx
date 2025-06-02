@@ -18,7 +18,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading: authIsLoading } = useAuth(); // Add isAuthenticated and authIsLoading
   const navigate = useNavigate();
 
   const {
@@ -30,27 +30,32 @@ const Login: React.FC = () => {
   const onSubmit = async (data: LoginForm) => {
     // console.log('Login attempt with data:', data); // Removed for security
     try {
-      setIsLoading(true);
+      setIsLoading(true); // Local loading state for the form
       setError('');
 
       // Use the login function from AuthContext
       const result = await login(data); // login from useAuth() now makes the API call
       
-      console.log('Login response from context:', result);
+      console.log('Login response from context:', result); // Keep this for now
 
-      if (result.success && result.data) {
-        // Token and user state are handled by AuthContext's login function
-        navigate('/dashboard');
-      } else {
+      if (!result.success) {
         setError(result.message || result.error || 'Login failed');
       }
+      // Navigation will be handled by useEffect watching isAuthenticated
     } catch (err: any) { // Catch any type for broader error handling
       setError(err.message || 'Unable to connect to the server. Please try again later.');
       console.error('Login error:', err);
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Local loading state for the form
     }
   };
+
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      console.log('Login.tsx: isAuthenticated is true, navigating to /dashboard');
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   return (
     <div className="auth-container">

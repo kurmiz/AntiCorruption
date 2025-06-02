@@ -1,22 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react'; // Import ReactNode as type
 import { authApi } from '../services/api';
-import type { UserRole } from '../types'; // Import UserRole from global types
+import type { UserRole, User as GlobalUser } from '../types'; // Import UserRole and User as GlobalUser
 
 // Removed local UserRole enum
-
-interface User { // This User interface is also defined in ../types. Consider importing.
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  avatar?: string;
-  phone?: string;
-  isVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+// Removed local User interface, will use GlobalUser
 
 interface LoginForm {
   email: string;
@@ -41,14 +29,14 @@ interface ApiResponse<T> {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: GlobalUser | null; // Changed to GlobalUser
   isLoading: boolean;
   isInitialized: boolean;
   isAuthenticated: boolean;
-  login: (credentials: LoginForm) => Promise<ApiResponse<{ user: User; token: string }>>;
-  register: (userData: RegisterForm) => Promise<ApiResponse<{ user: User; token: string }>>;
+  login: (credentials: LoginForm) => Promise<ApiResponse<{ user: GlobalUser; token: string }>>; // Changed to GlobalUser
+  register: (userData: RegisterForm) => Promise<ApiResponse<{ user: GlobalUser; token: string }>>; // Changed to GlobalUser
   logout: () => void;
-  updateUser: (userData: Partial<User>) => Promise<void>;
+  updateUser: (userData: Partial<GlobalUser>) => Promise<void>; // Changed to GlobalUser
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,7 +46,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<GlobalUser | null>(null); // Changed to GlobalUser
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -66,28 +54,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem('token');
 
         if (!token) {
           console.log('No token found, setting initialized state');
           setUser(null);
+          setIsInitialized(true);
+          setIsLoading(false);
           return;
         }
 
         const response = await authApi.getCurrentUser();
-        console.log('getCurrentUser response:', response);
+        console.log('getCurrentUser raw response:', JSON.stringify(response, null, 2));
+        
+        // Detailed response structure logging
+        console.log('Response success:', response.success);
+        console.log('Response data:', response.data);
         
         if (response.success && response.data) {
-          console.log('User authenticated:', response.data.role);
-          setUser(response.data);
+          const userData = response.data as GlobalUser; // Assert type to GlobalUser
+          console.log('Extracted user data:', JSON.stringify(userData, null, 2));
+          console.log('User role:', userData?.role);
+          console.log('Full user object:', userData);
+          
+          setUser(userData);
         } else {
           console.log('Token invalid, clearing auth state');
-          localStorage.removeItem('auth-token');
+          localStorage.removeItem('token');
           setUser(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        localStorage.removeItem('auth-token');
+        localStorage.removeItem('token');
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -98,48 +96,62 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (credentials: LoginForm): Promise<ApiResponse<{ user: User; token: string }>> => {
+  const login = async (credentials: LoginForm): Promise<ApiResponse<{ user: GlobalUser; token: string }>> => { // Use GlobalUser
     try {
       setIsLoading(true);
       const response = await authApi.login(credentials);
       console.log('AuthContext login: Raw response from authApi.login:', JSON.stringify(response, null, 2)); // Log the whole response
 
-      if (response.success && response.data && response.data.data) {
-        const { user: userData, token } = response.data.data;
-        console.log('Login successful - user data:', userData);
-        localStorage.setItem('auth-token', token);
-        setUser(userData);
-        console.log('AuthContext: User set after login:', userData);
-        // Immediately after setting user, isAuthenticated should be true if userData is not null
-        console.log('AuthContext: isAuthenticated after login (expected true):', !!userData);
+      if (response.success && response.data) {
+        // The API response is nested: response.data contains the actual response data
+        // Extract user and token from the correct location
+        const { user: userData, token } = response.data;
+        
+        if (userData && token) {
+          console.log('Login successful - user data:', userData);
+          localStorage.setItem('token', token);
+          setUser(userData as GlobalUser); // Assert type to GlobalUser
+          console.log('AuthContext: User set after login:', userData);
+          // Immediately after setting user, isAuthenticated should be true if userData is not null
+          console.log('AuthContext: isAuthenticated after login (expected true):', !!userData);
+          
+          return {
+            success: true,
+            data: { user: userData, token }
+          };
+        }
       }
-      // Ensure isLoading is false before returning
-      setIsLoading(false);
-      console.log('AuthContext: login function returning. isLoading:', false, 'Response:', response);
-      return response;
+      
+      // If we get here, there was a problem with the response structure
+      console.log('AuthContext: login function returning. isLoading:', isLoading, 'Response:', response);
+      // Ensure the return type matches the promise, assuming response.data is now correctly structured
+      // If response.data is { user: GlobalUser, token: string }, this cast is fine.
+      // However, the actual 'response' object from authApi.login is GlobalApiResponse<{user: GlobalUser, token: string}>
+      // So, if response.data is already {user, token}, then the cast should be to that.
+      // The function signature is Promise<ApiResponse<{ user: GlobalUser; token: string }>>
+      // The 'response' variable here IS that type if the API call was successful and structured as expected.
+      return response; // No cast needed if 'response' already matches the return type.
     } catch (error) {
-      setIsLoading(false); // Ensure isLoading is false on error too
       console.error('Login error in AuthContext:', error);
       console.error('Login error:', error);
       return {
         success: false,
         error: 'Login failed. Please try again.'
       };
+    } finally {
+      setIsLoading(false);
     }
-    // finally { // setIsLoading(false) is now handled in try and catch
-      // setIsLoading(false);
-    // }
   };
 
-  const register = async (userData: RegisterForm): Promise<ApiResponse<{ user: User; token: string }>> => {
+  const register = async (userData: RegisterForm): Promise<ApiResponse<{ user: GlobalUser; token: string }>> => { // Changed to GlobalUser
     try {
       setIsLoading(true);
       const response = await authApi.register(userData);
 
       if (response.success && response.data) {
-        const { user: newUser, token } = response.data;
-        localStorage.setItem('auth-token', token);
-        setUser(newUser);
+        const { user: newUser, token } = response.data; // newUser should be GlobalUser
+        localStorage.setItem('token', token);
+        setUser(newUser as GlobalUser); // Assert type to GlobalUser
         console.log('AuthContext: User set after registration:', newUser); // For debugging redirect
       }
 
@@ -161,11 +173,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await authApi.logout();
 
       // Always clear local state regardless of API response
+      localStorage.removeItem('token');
       setUser(null);
 
       return response;
     } catch (error) {
       // Even if API call fails, clear local state
+      localStorage.removeItem('token');
       setUser(null);
       return {
         success: false,
@@ -176,11 +190,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const updateUser = async (userData: Partial<User>) => {
+  const updateUser = async (userData: Partial<GlobalUser>) => { // Changed to GlobalUser
     try {
       const response = await authApi.updateProfile(userData);
       if (response.success && response.data) {
-        setUser(response.data);
+        setUser(response.data as GlobalUser); // Assert type to GlobalUser
       }
     } catch (error) {
       console.error('Update user error:', error);
