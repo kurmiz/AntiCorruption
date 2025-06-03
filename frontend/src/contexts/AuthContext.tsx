@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react'; // Import ReactNode as type
 import { authApi } from '../services/api';
 import type { UserRole, User as GlobalUser } from '../types'; // Import UserRole and User as GlobalUser
+import { jwtDecode } from 'jwt-decode';
 
 // Removed local UserRole enum
 // Removed local User interface, will use GlobalUser
@@ -51,68 +52,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        setIsLoading(true);
-        const token = localStorage.getItem('token');
+    const initializeAuth = () => { // Removed async as we are not awaiting inside directly for API calls
+      setIsLoading(true);
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
 
-        if (!token) {
-          console.log('No token found, setting initialized state');
-          setUser(null);
-          setIsInitialized(true);
-          setIsLoading(false);
-          return;
-        }
+      if (token && storedUser) {
+        try {
+          const decodedToken: { exp: number } = jwtDecode(token);
+          const currentTime = Date.now() / 1000;
 
-        const response = await authApi.getCurrentUser();
-        console.log('getCurrentUser raw response:', JSON.stringify(response, null, 2));
-        
-        // Detailed response structure logging
-        console.log('Response success:', response.success);
-        console.log('Response data:', response.data);
-        
-        if (response.success && response.data) {
-          const userData = response.data as GlobalUser; // Assert type to GlobalUser
-          console.log('Extracted user data:', JSON.stringify(userData, null, 2));
-          console.log('User role:', userData?.role);
-          console.log('Full user object:', userData);
-          
-          setUser(userData);
-        } else {
-          console.log('Token invalid, clearing auth state');
+          if (decodedToken.exp < currentTime) {
+            // Token expired
+            console.log('Token expired, clearing auth state');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+          } else {
+            // Valid token
+            console.log('Token valid, rehydrating user state');
+            setUser(JSON.parse(storedUser) as GlobalUser);
+          }
+        } catch (error) {
+          console.error('Error decoding token or parsing user:', error);
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
           setUser(null);
         }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        localStorage.removeItem('token');
+      } else {
+        console.log('No token or user found in localStorage, setting to null');
         setUser(null);
-      } finally {
-        setIsLoading(false);
-        setIsInitialized(true);
       }
+      setIsLoading(false);
+      setIsInitialized(true); // Ensure this is called after all checks
     };
 
     initializeAuth();
   }, []);
 
-  const login = async (credentials: LoginForm): Promise<ApiResponse<{ user: GlobalUser; token: string }>> => { // Use GlobalUser
+  const login = async (credentials: LoginForm): Promise<ApiResponse<{ user: GlobalUser; token: string }>> => {
     try {
       setIsLoading(true);
       const response = await authApi.login(credentials);
-      console.log('AuthContext login: Raw response from authApi.login:', JSON.stringify(response, null, 2)); // Log the whole response
+      console.log('AuthContext login: Raw response from authApi.login:', JSON.stringify(response, null, 2));
 
       if (response.success && response.data) {
-        // The API response is nested: response.data contains the actual response data
-        // Extract user and token from the correct location
         const { user: userData, token } = response.data;
         
         if (userData && token) {
           console.log('Login successful - user data:', userData);
           localStorage.setItem('token', token);
-          setUser(userData as GlobalUser); // Assert type to GlobalUser
+          localStorage.setItem('user', JSON.stringify(userData)); // Save user to localStorage
+          setUser(userData as GlobalUser);
           console.log('AuthContext: User set after login:', userData);
-          // Immediately after setting user, isAuthenticated should be true if userData is not null
           console.log('AuthContext: isAuthenticated after login (expected true):', !!userData);
           
           return {
@@ -122,18 +114,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
       
-      // If we get here, there was a problem with the response structure
       console.log('AuthContext: login function returning. isLoading:', isLoading, 'Response:', response);
-      // Ensure the return type matches the promise, assuming response.data is now correctly structured
-      // If response.data is { user: GlobalUser, token: string }, this cast is fine.
-      // However, the actual 'response' object from authApi.login is GlobalApiResponse<{user: GlobalUser, token: string}>
-      // So, if response.data is already {user, token}, then the cast should be to that.
-      // The function signature is Promise<ApiResponse<{ user: GlobalUser; token: string }>>
-      // The 'response' variable here IS that type if the API call was successful and structured as expected.
-      return response; // No cast needed if 'response' already matches the return type.
+      return response;
     } catch (error) {
       console.error('Login error in AuthContext:', error);
-      console.error('Login error:', error);
       return {
         success: false,
         error: 'Login failed. Please try again.'
@@ -143,16 +127,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (userData: RegisterForm): Promise<ApiResponse<{ user: GlobalUser; token: string }>> => { // Changed to GlobalUser
+  const register = async (userData: RegisterForm): Promise<ApiResponse<{ user: GlobalUser; token: string }>> => {
     try {
       setIsLoading(true);
       const response = await authApi.register(userData);
 
       if (response.success && response.data) {
-        const { user: newUser, token } = response.data; // newUser should be GlobalUser
+        const { user: newUser, token } = response.data;
         localStorage.setItem('token', token);
-        setUser(newUser as GlobalUser); // Assert type to GlobalUser
-        console.log('AuthContext: User set after registration:', newUser); // For debugging redirect
+        localStorage.setItem('user', JSON.stringify(newUser)); // Save user to localStorage
+        setUser(newUser as GlobalUser);
+        console.log('AuthContext: User set after registration:', newUser);
       }
 
       return response;
@@ -170,23 +155,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<ApiResponse<any>> => {
     try {
       setIsLoading(true);
-      const response = await authApi.logout();
-
-      // Always clear local state regardless of API response
-      localStorage.removeItem('token');
-      setUser(null);
-
-      return response;
+      // Attempt API logout, but proceed with local cleanup regardless of success
+      await authApi.logout();
     } catch (error) {
-      // Even if API call fails, clear local state
-      localStorage.removeItem('token');
-      setUser(null);
-      return {
-        success: false,
-        error: 'Logout failed'
-      };
+      console.error('API logout failed, proceeding with local cleanup:', error);
     } finally {
+      // Always clear local state
+      localStorage.removeItem('token');
+      localStorage.removeItem('user'); // Clear user from localStorage
+      setUser(null);
       setIsLoading(false);
+      // Return a success response for local logout, as the primary goal is to clear client-side auth
+      return { success: true, message: 'Logged out successfully locally.' };
     }
   };
 
