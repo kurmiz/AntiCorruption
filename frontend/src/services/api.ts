@@ -97,7 +97,7 @@ class ApiService {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('auth-token');
+        const token = localStorage.getItem('token'); // Use consistent token key
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -111,7 +111,8 @@ class ApiService {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('auth-token'); // Corrected token key
+          localStorage.removeItem('token'); // Use consistent token key
+          localStorage.removeItem('user'); // Also remove user data
           window.location.href = '/login';
         }
         return Promise.reject(error);
@@ -180,13 +181,14 @@ export const authApi = {
 
   register: async (userData: RegisterForm): Promise<GlobalApiResponse<any>> => { // Changed userData type to RegisterForm
     const apiService = new ApiService();
-    // Transform data to match backend expectations
+    // Send firstName and lastName directly to match enhanced backend
     const payload = {
       email: userData.email,
       password: userData.password,
-      name: `${userData.firstName} ${userData.lastName}`,
+      firstName: userData.firstName,
+      lastName: userData.lastName,
       role: userData.role,
-      // phone: userData.phone, // If phone is to be sent, ensure backend handles it and User model has phone
+      phone: userData.phone, // Include phone if provided
     };
     return apiService['handleRequest'](
       apiService['api'].post('/auth/signup', payload)
@@ -204,32 +206,17 @@ export const authApi = {
   },
 
   updateProfile: async (userData: any): Promise<ApiResponse<any>> => {
-    await mockDelay(800); // Simulate network delay
+    const apiService = new ApiService();
+    return apiService['handleRequest'](
+      apiService['api'].put('/auth/profile', userData)
+    );
+  },
 
-    const userStr = localStorage.getItem('auth-user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        const updatedUser = { ...user, ...userData, updatedAt: new Date().toISOString() };
-        localStorage.setItem('auth-user', JSON.stringify(updatedUser));
-
-        return {
-          success: true,
-          data: updatedUser,
-          message: 'Profile updated successfully'
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: 'Failed to update profile'
-        };
-      }
-    } else {
-      return {
-        success: false,
-        error: 'User not found'
-      };
-    }
+  updatePreferences: async (preferences: any): Promise<ApiResponse<any>> => {
+    const apiService = new ApiService();
+    return apiService['handleRequest'](
+      apiService['api'].put('/auth/preferences', preferences)
+    );
   },
 
   forgotPassword: async (email: string): Promise<ApiResponse<{ message: string }>> => {

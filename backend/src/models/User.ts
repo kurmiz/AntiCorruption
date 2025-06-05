@@ -96,8 +96,12 @@ const userSchema = new Schema<IUser>({
     minlength: [8, 'Password must be at least 8 characters long'],
     validate: {
       validator: function(password: string) {
-        // Password must contain at least one uppercase, one lowercase, and one number
-        return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+        // Only validate if password is being modified and not already hashed
+        if (this.isModified('password') && !password.startsWith('$2')) {
+          // Password must contain at least one uppercase, one lowercase, and one number
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password);
+        }
+        return true; // Skip validation for already hashed passwords
       },
       message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
     }
