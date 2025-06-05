@@ -8,7 +8,11 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
-    "test": "jest"
+    "test": "jest",
+    "db:setup": "node scripts/setup-mongodb.js",
+    "db:seed": "node scripts/setup-mongodb.js",
+    "db:health": "curl http://localhost:5000/health",
+    "db:status": "curl http://localhost:5000/api/status/database"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
