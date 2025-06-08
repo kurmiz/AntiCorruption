@@ -174,7 +174,7 @@ router.put('/:id', updateReportValidation, validate, updateReport);
 router.delete('/:id', deleteReport);
 
 // Admin/Police only routes
-router.use(authorize(['admin', 'police']));
+router.use(authorize('admin', 'police'));
 
 // Update report status
 router.put('/:id/status', statusUpdateValidation, validate, updateReportStatus);

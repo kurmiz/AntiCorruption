@@ -87,7 +87,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: '/api', // This will be proxied by Vite dev server
+      baseURL: 'http://localhost:5000/api', // Point directly to backend server
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
@@ -321,6 +321,66 @@ export const reportsApi = {
     const apiService = new ApiService();
     return apiService['handleRequest'](
       apiService['api'].delete(`/reports/${id}`)
+    );
+  },
+
+  // Submit report (alias for createReport for backward compatibility)
+  submitReport: async (reportData: any): Promise<ApiResponse<any>> => {
+    return reportsApi.createReport(reportData);
+  },
+
+  // Submit anonymous report
+  submitAnonymousReport: async (reportData: any): Promise<ApiResponse<any>> => {
+    const apiService = new ApiService();
+    const formData = new FormData();
+
+    // Append text fields
+    Object.entries(reportData).forEach(([key, value]) => {
+      if (key !== 'media' && value !== undefined && value !== null) {
+        if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, value as string | Blob);
+        }
+      }
+    });
+
+    // Append media files
+    if (reportData.media && Array.isArray(reportData.media)) {
+      reportData.media.forEach((file: File) => {
+        formData.append('media', file);
+      });
+    }
+
+    return apiService['handleRequest'](
+      apiService['api'].post('/reports/anonymous', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+    );
+  },
+
+  // Get user's own reports
+  getMyReports: async (params?: { page?: number; limit?: number }): Promise<ApiResponse<any>> => {
+    const apiService = new ApiService();
+    const queryParams = new URLSearchParams();
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+    }
+
+    const url = `/reports/my-reports${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return apiService['handleRequest'](apiService['api'].get(url));
+  },
+
+  // Update report status (admin/police only)
+  updateReportStatus: async (id: string, status: string, reason?: string, notes?: string): Promise<ApiResponse<any>> => {
+    const apiService = new ApiService();
+    return apiService['handleRequest'](
+      apiService['api'].put(`/reports/${id}/status`, { status, reason, notes })
     );
   },
 

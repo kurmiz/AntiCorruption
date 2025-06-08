@@ -36,9 +36,20 @@ interface ReportForm {
   description: string;
   category: ReportCategory;
   incidentDate: string;
-  incidentTime: string;
+  incidentTime?: string;
   location: Location;
   isAnonymous: boolean;
+  involvedParties?: Array<{
+    name: string;
+    role: string;
+    organization?: string;
+    position?: string;
+    contactInfo?: string;
+  }>;
+  estimatedLoss?: string;
+  currency?: string;
+  urgencyLevel?: number;
+  tags?: string[];
   media?: File[];
 }
 
@@ -154,8 +165,10 @@ const ReportSubmission: React.FC = () => {
         return !!watchedTitle?.trim() && !!watchedDescription?.trim() && !!watchedCategory;
       case 'datetime':
         const date = watch('incidentDate');
-        const location = selectedLocation;
-        return !!date && !!location;
+        const address = watch('location.address');
+        const city = watch('location.city');
+        const state = watch('location.state');
+        return !!date && !!address?.trim() && !!city?.trim() && !!state?.trim();
       case 'evidence':
         // Evidence is optional
         return true;
@@ -171,21 +184,55 @@ const ReportSubmission: React.FC = () => {
       setIsLoading(true);
       setError('');
 
-      const formData = {
-        ...data,
+      // Prepare the report data
+      const reportData = {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        incidentDate: data.incidentDate,
+        incidentTime: data.incidentTime || '',
+        location: {
+          address: data.location?.address || '',
+          city: data.location?.city || '',
+          state: data.location?.state || '',
+          country: data.location?.country || 'India',
+          coordinates: selectedLocation ? {
+            latitude: selectedLocation.lat,
+            longitude: selectedLocation.lng
+          } : undefined
+        },
         isAnonymous,
+        involvedParties: data.involvedParties || [],
+        estimatedLoss: data.estimatedLoss ? parseFloat(data.estimatedLoss) : undefined,
+        currency: data.currency || 'INR',
+        urgencyLevel: data.urgencyLevel || 5,
+        tags: data.tags || [],
         media: selectedFiles
       };
 
-      const response = await reportsApi.createReport(formData);
+      console.log('Submitting report data:', JSON.stringify(reportData, null, 2));
+      console.log('Selected files:', selectedFiles);
+      console.log('Is anonymous:', isAnonymous);
+
+      // Choose the appropriate API call based on anonymous setting
+      const response = isAnonymous
+        ? await reportsApi.submitAnonymousReport(reportData)
+        : await reportsApi.createReport(reportData);
+
+      console.log('Report submission response:', JSON.stringify(response, null, 2));
 
       if (response.success) {
-        window.location.href = '/profile/reports';
+        // Show success message
+        alert('Report submitted successfully! You will be redirected to your reports.');
+        // Redirect to reports page
+        window.location.href = '/dashboard';
       } else {
-        setError(response.error || 'Failed to submit report');
+        console.error('Report submission failed:', response);
+        setError(response.error || response.message || 'Failed to submit report');
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('Report submission error:', err);
+      setError('An unexpected error occurred while submitting the report');
     } finally {
       setIsLoading(false);
     }
@@ -348,6 +395,9 @@ const ReportSubmission: React.FC = () => {
                   hint="When did the incident occur?"
                 >
                   <DateTimePicker
+                    {...register('incidentDate', {
+                      required: 'Incident date is required'
+                    })}
                     type="date"
                     max={new Date().toISOString().split('T')[0]}
                     min="2020-01-01"

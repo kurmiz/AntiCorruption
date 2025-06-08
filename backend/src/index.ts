@@ -7,6 +7,7 @@ import { logger } from './utils/logger';
 import { databaseManager } from './config/database';
 import { databaseService } from './services/DatabaseService';
 import authRoutes from './routes/auth';
+import reportRoutes from './routes/reports';
 
 interface CustomError extends Error {
   status?: number;
@@ -97,8 +98,12 @@ app.get('/api/status/database', async (req: Request, res: Response) => {
   }
 });
 
+// Static file serving for uploads
+app.use('/uploads', express.static('uploads'));
+
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Error handling middleware
 app.use((err: CustomError, req: Request, res: Response, next: NextFunction) => {

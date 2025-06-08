@@ -74,7 +74,24 @@ const DateTimePicker = forwardRef<HTMLInputElement, DateTimePickerProps>(({
           id={id}
           {...props}
         />
-        <div className="datetime-picker-icon" aria-hidden="true">
+        {/* Make icon clickable to focus input */}
+        <div
+          className="datetime-picker-icon"
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={() => {
+            if (ref && typeof ref !== 'function' && ref?.current) {
+              ref.current.focus();
+            } else {
+              // fallback: focus by id
+              if (id) {
+                const el = document.getElementById(id);
+                if (el) el.focus();
+              }
+            }
+          }}
+          style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+        >
           {getIcon()}
         </div>
       </div>
