@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { signup, login, getMe, updateProfile, updatePreferences } from '../controllers/auth';
+import { signup, login, getMe, updateProfile, updatePreferences, updatePassword } from '../controllers/auth';
 import { protect } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
@@ -91,6 +91,28 @@ const preferencesUpdateValidation = [
     .withMessage('Default dashboard must be a valid string'),
 ];
 
+const passwordUpdateValidation = [
+  body('currentPassword')
+    .notEmpty()
+    .withMessage('Current password is required')
+    .isLength({ min: 1 })
+    .withMessage('Current password cannot be empty'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('New password must be at least 8 characters long')
+    .matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)
+    .withMessage('New password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+  body('confirmPassword')
+    .notEmpty()
+    .withMessage('Password confirmation is required')
+    .custom((value, { req }) => {
+      if (value !== req.body.newPassword) {
+        throw new Error('Password confirmation does not match new password');
+      }
+      return true;
+    }),
+];
+
 const loginValidation = [
   body('email')
     .isEmail()
@@ -108,5 +130,6 @@ router.get('/me', protect, getMe);
 router.get('/profile', protect, getMe); // Alias for /me
 router.put('/profile', protect, profileUpdateValidation, validate, updateProfile);
 router.put('/preferences', protect, preferencesUpdateValidation, validate, updatePreferences);
+router.put('/password', protect, passwordUpdateValidation, validate, updatePassword);
 
 export default router;

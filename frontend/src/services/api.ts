@@ -225,6 +225,23 @@ export const authApi = {
     );
   },
 
+  updatePassword: async (passwordData: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<ApiResponse<{ message: string }>> => {
+    const apiService = new ApiService();
+    console.log('authApi.updatePassword: Sending password update request');
+    console.log('authApi.updatePassword: Current token:', localStorage.getItem('token'));
+
+    const response = await apiService['handleRequest'](
+      apiService['api'].put('/auth/password', passwordData)
+    );
+
+    console.log('authApi.updatePassword: Response received:', response);
+    return response;
+  },
+
   forgotPassword: async (email: string): Promise<ApiResponse<{ message: string }>> => {
     await mockDelay(800); // Simulate network delay
 

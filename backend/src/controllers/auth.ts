@@ -359,3 +359,140 @@ export const updatePreferences = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+
+// Password update endpoint
+export const updatePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    logger.info('Password update request received', {
+      userId: req.user?._id,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      timestamp: new Date().toISOString()
+    });
+
+    const user = req.user;
+    if (!user) {
+      logger.error('Password update failed: User not found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    // Validate required fields
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      logger.warn('Password update failed: Missing required fields', { userId: user._id });
+      return res.status(400).json({
+        success: false,
+        message: 'Current password, new password, and confirmation are required'
+      });
+    }
+
+    // Validate new password confirmation
+    if (newPassword !== confirmPassword) {
+      logger.warn('Password update failed: Password confirmation mismatch', { userId: user._id });
+      return res.status(400).json({
+        success: false,
+        message: 'New password and confirmation do not match'
+      });
+    }
+
+    // Get the full user document with password
+    const fullUser = await User.findById(user._id).select('+password');
+    if (!fullUser) {
+      logger.error('Password update failed: User not found in database', { userId: user._id });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await fullUser.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      logger.warn('Password update failed: Invalid current password', {
+        userId: user._id,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      // Add security log for failed password change attempt
+      await fullUser.addSecurityLog(
+        'password_change_failed',
+        req.ip || 'unknown',
+        req.get('User-Agent') || 'unknown',
+        false,
+        'Invalid current password provided'
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Check if new password is different from current password
+    const isSamePassword = await fullUser.comparePassword(newPassword);
+    if (isSamePassword) {
+      logger.warn('Password update failed: New password same as current', { userId: user._id });
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    // Update password (will be hashed by pre-save middleware)
+    fullUser.password = newPassword;
+
+    // Save the user (this triggers password hashing middleware)
+    await fullUser.save();
+
+    logger.info('Password updated successfully', {
+      userId: fullUser._id,
+      email: fullUser.email,
+      timestamp: new Date().toISOString()
+    });
+
+    // Add security log for successful password change
+    await fullUser.addSecurityLog(
+      'password_change',
+      req.ip || 'unknown',
+      req.get('User-Agent') || 'unknown',
+      true,
+      'Password changed successfully'
+    );
+
+    // Verify the password was actually updated in the database
+    const updatedUser = await User.findById(user._id).select('+password');
+    const isNewPasswordSet = await updatedUser?.comparePassword(newPassword);
+
+    if (!isNewPasswordSet) {
+      logger.error('Password update verification failed: New password not set correctly', { userId: user._id });
+      return res.status(500).json({
+        success: false,
+        message: 'Password update failed - please try again'
+      });
+    }
+
+    logger.info('Password update verified in database', { userId: user._id });
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+
+  } catch (error) {
+    logger.error('Password update error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      userId: req.user?._id
+    });
+
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Error updating password'
+    });
+  }
+};

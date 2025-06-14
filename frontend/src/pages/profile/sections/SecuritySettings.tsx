@@ -11,6 +11,7 @@ import {
   Key,
   Save
 } from 'lucide-react';
+import { authApi } from '../../../services/api';
 
 interface SecurityData {
   currentPassword: string;
@@ -99,18 +100,37 @@ const SecuritySettings: React.FC = () => {
     setSubmitStatus(null);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('SecuritySettings: Submitting password change');
 
-      setSubmitStatus({ success: true, message: 'Password updated successfully!' });
-      setSecurityData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      }));
-    } catch (error) {
-      setSubmitStatus({ success: false, message: 'Failed to update password' });
+      const response = await authApi.updatePassword({
+        currentPassword: securityData.currentPassword,
+        newPassword: securityData.newPassword,
+        confirmPassword: securityData.confirmPassword
+      });
+
+      console.log('SecuritySettings: Password change response:', response);
+
+      if (response.success) {
+        setSubmitStatus({ success: true, message: 'Password updated successfully!' });
+        setSecurityData(prev => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        }));
+        setPasswordErrors({});
+      } else {
+        setSubmitStatus({
+          success: false,
+          message: response.error || response.message || 'Failed to update password'
+        });
+      }
+    } catch (error: any) {
+      console.error('SecuritySettings: Password change error:', error);
+      setSubmitStatus({
+        success: false,
+        message: error.message || 'An unexpected error occurred'
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -250,6 +270,46 @@ const SecuritySettings: React.FC = () => {
               <div className="error-message">
                 <AlertCircle className="h-4 w-4" />
                 <span>{passwordErrors.newPassword}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div className="form-group">
+            <label htmlFor="confirmPassword" className="form-label">
+              <Lock className="h-4 w-4" />
+              Confirm New Password
+              <span className="required">*</span>
+            </label>
+            <div className="password-input-container">
+              <input
+                type={showPasswords.confirm ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={securityData.confirmPassword}
+                onChange={handleInputChange}
+                className={`form-input ${passwordErrors.confirmPassword ? 'error' : ''}`}
+                placeholder="Confirm your new password"
+                required
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility('confirm')}
+                className="password-toggle"
+                aria-label="Toggle password visibility"
+              >
+                {showPasswords.confirm ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {passwordErrors.confirmPassword && (
+              <div className="error-message">
+                <AlertCircle className="h-4 w-4" />
+                <span>{passwordErrors.confirmPassword}</span>
               </div>
             )}
           </div>
