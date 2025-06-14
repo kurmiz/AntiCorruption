@@ -207,9 +207,15 @@ export const authApi = {
 
   updateProfile: async (userData: any): Promise<ApiResponse<any>> => {
     const apiService = new ApiService();
-    return apiService['handleRequest'](
+    console.log('authApi.updateProfile: Sending data:', userData);
+    console.log('authApi.updateProfile: Current token:', localStorage.getItem('token'));
+
+    const response = await apiService['handleRequest'](
       apiService['api'].put('/auth/profile', userData)
     );
+
+    console.log('authApi.updateProfile: Response received:', response);
+    return response;
   },
 
   updatePreferences: async (preferences: any): Promise<ApiResponse<any>> => {

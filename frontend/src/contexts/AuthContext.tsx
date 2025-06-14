@@ -172,12 +172,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = async (userData: Partial<GlobalUser>) => { // Changed to GlobalUser
     try {
+      console.log('AuthContext: Updating user with data:', userData);
+      console.log('AuthContext: Current user before update:', user);
+
       const response = await authApi.updateProfile(userData);
+      console.log('AuthContext: Profile update response:', response);
+
       if (response.success && response.data) {
+        console.log('AuthContext: Setting updated user data:', response.data);
         setUser(response.data as GlobalUser); // Assert type to GlobalUser
+
+        // Also update localStorage to persist the changes
+        localStorage.setItem('user', JSON.stringify(response.data));
+        console.log('AuthContext: Updated user saved to localStorage');
+      } else {
+        console.error('AuthContext: Profile update failed:', response.error || response.message);
+        throw new Error(response.error || response.message || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Update user error:', error);
+      console.error('AuthContext: Update user error:', error);
       throw error;
     }
   };

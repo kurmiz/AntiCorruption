@@ -227,8 +227,18 @@ export const getMe = async (req: AuthRequest, res: Response) => {
 // Profile update endpoint
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
+    logger.info('Profile update request received', {
+      userId: req.user?._id,
+      body: req.body,
+      headers: {
+        authorization: req.headers.authorization ? 'Bearer [REDACTED]' : 'None',
+        contentType: req.headers['content-type']
+      }
+    });
+
     const user = req.user;
     if (!user) {
+      logger.error('Profile update failed: User not found in request');
       return res.status(400).json({
         success: false,
         message: 'User not found in request'
@@ -236,6 +246,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     }
 
     const { firstName, lastName, phone, avatar } = req.body;
+    logger.info('Profile update data', { firstName, lastName, phone, hasAvatar: !!avatar });
 
     // Get the full user document for updating
     const fullUser = await User.findById(user._id);
@@ -253,6 +264,10 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
     if (avatar !== undefined) fullUser.avatar = avatar;
 
     await fullUser.save();
+    logger.info('Profile updated successfully in database', {
+      userId: fullUser._id,
+      updatedFields: { firstName: fullUser.firstName, lastName: fullUser.lastName, phone: fullUser.phone }
+    });
 
     // Add security log
     await fullUser.addSecurityLog(
