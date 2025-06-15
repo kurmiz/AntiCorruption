@@ -1,0 +1,269 @@
+/* DateTime Picker Styles */
+.datetime-picker-container {
+  position: relative;
+  width: 100%;
+}
+
+.datetime-picker-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.datetime-picker-input-wrapper:hover {
+  border-color: #d1d5db;
+}
+
+.datetime-picker-input-wrapper:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.datetime-picker-input {
+  flex: 1;
+  padding: 12px 16px;
+  padding-right: 48px; /* Space for icon */
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  background: transparent;
+  width: 100%;
+}
+
+.datetime-picker-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.datetime-picker-input:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.datetime-picker-input::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.datetime-picker-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.datetime-picker-input-wrapper:focus-within .datetime-picker-icon {
+  color: #3b82f6;
+}
+
+.datetime-picker-input-wrapper:hover .datetime-picker-icon {
+  color: #374151;
+}
+
+/* Error state */
+.datetime-picker-input-wrapper.error {
+  border-color: #ef4444;
+}
+
+.datetime-picker-input-wrapper.error:focus-within {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.datetime-picker-input-wrapper.error .datetime-picker-icon {
+  color: #ef4444;
+}
+
+/* Success state */
+.datetime-picker-input-wrapper.success {
+  border-color: #10b981;
+}
+
+.datetime-picker-input-wrapper.success .datetime-picker-icon {
+  color: #10b981;
+}
+
+/* Size variations */
+.datetime-picker-container.small .datetime-picker-input {
+  padding: 8px 12px;
+  padding-right: 40px;
+  font-size: 13px;
+}
+
+.datetime-picker-container.small .datetime-picker-icon {
+  right: 8px;
+}
+
+.datetime-picker-container.large .datetime-picker-input {
+  padding: 16px 20px;
+  padding-right: 56px;
+  font-size: 16px;
+}
+
+.datetime-picker-container.large .datetime-picker-icon {
+  right: 16px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .datetime-picker-input-wrapper {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  
+  .datetime-picker-input-wrapper:hover {
+    border-color: #4b5563;
+  }
+  
+  .datetime-picker-input {
+    color: #f9fafb;
+  }
+  
+  .datetime-picker-input::placeholder {
+    color: #6b7280;
+  }
+  
+  .datetime-picker-input:disabled {
+    background-color: #374151;
+    color: #9ca3af;
+  }
+  
+  .datetime-picker-icon {
+    color: #9ca3af;
+  }
+  
+  .datetime-picker-input-wrapper:focus-within .datetime-picker-icon {
+    color: #60a5fa;
+  }
+  
+  .datetime-picker-input-wrapper:hover .datetime-picker-icon {
+    color: #d1d5db;
+  }
+}
+
+/* Custom date/time picker styling for better UX */
+.datetime-picker-input::-webkit-datetime-edit {
+  padding: 0;
+}
+
+.datetime-picker-input::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+.datetime-picker-input::-webkit-datetime-edit-text {
+  color: #6b7280;
+  padding: 0 2px;
+}
+
+.datetime-picker-input::-webkit-datetime-edit-month-field,
+.datetime-picker-input::-webkit-datetime-edit-day-field,
+.datetime-picker-input::-webkit-datetime-edit-year-field,
+.datetime-picker-input::-webkit-datetime-edit-hour-field,
+.datetime-picker-input::-webkit-datetime-edit-minute-field,
+.datetime-picker-input::-webkit-datetime-edit-second-field,
+.datetime-picker-input::-webkit-datetime-edit-millisecond-field,
+.datetime-picker-input::-webkit-datetime-edit-meridiem-field {
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: transparent;
+  color: #111827;
+  font-weight: 500;
+}
+
+.datetime-picker-input::-webkit-datetime-edit-month-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-day-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-year-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-hour-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-minute-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-second-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-millisecond-field:focus,
+.datetime-picker-input::-webkit-datetime-edit-meridiem-field:focus {
+  background: #eff6ff;
+  color: #1e40af;
+  outline: none;
+}
+
+/* Firefox specific styles */
+.datetime-picker-input::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .datetime-picker-input {
+    padding: 14px 16px;
+    padding-right: 48px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .datetime-picker-icon {
+    right: 12px;
+  }
+}
+
+/* Animation for better UX */
+.datetime-picker-input-wrapper {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus ring for accessibility */
+.datetime-picker-input:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .datetime-picker-input-wrapper {
+    border-width: 3px;
+  }
+  
+  .datetime-picker-input-wrapper:focus-within {
+    border-color: #000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .datetime-picker-input-wrapper,
+  .datetime-picker-icon {
+    transition: none;
+  }
+  
+  .datetime-picker-input-wrapper {
+    animation: none;
+  }
+}
