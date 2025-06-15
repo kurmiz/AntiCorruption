@@ -306,31 +306,102 @@ export const reportsApi = {
 
   createReport: async (reportData: any): Promise<ApiResponse<any>> => {
     const apiService = new ApiService();
-    const formData = new FormData();
 
-    // Append text fields
-    Object.entries(reportData).forEach(([key, value]) => {
-      if (key !== 'media' && value !== undefined && value !== null) {
-        if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value as string | Blob); // Type assertion
-        }
+    try {
+      console.log('createReport: Starting report creation with data:', reportData);
+
+      // Validate required fields before sending
+      const validationErrors = [];
+      if (!reportData.title || reportData.title.trim().length < 10) {
+        validationErrors.push('Title must be at least 10 characters long');
       }
-    });
+      if (!reportData.description || reportData.description.trim().length < 50) {
+        validationErrors.push('Description must be at least 50 characters long');
+      }
+      if (!reportData.category) {
+        validationErrors.push('Category is required');
+      }
+      if (!reportData.incidentDate) {
+        validationErrors.push('Incident date is required');
+      }
+      if (!reportData.location || !reportData.location.address || !reportData.location.city || !reportData.location.state) {
+        validationErrors.push('Complete location (address, city, state) is required');
+      }
 
-    // Append media files
-    if (reportData.media && Array.isArray(reportData.media)) {
-      reportData.media.forEach((file: File) => { // Added File type
-        formData.append('media', file);
-      });
+      if (validationErrors.length > 0) {
+        return {
+          success: false,
+          error: validationErrors.join('; ')
+        };
+      }
+
+      const formData = new FormData();
+
+      // Helper function to append nested objects with dot notation
+      const appendToFormData = (obj: any, prefix = '') => {
+        Object.entries(obj).forEach(([key, value]) => {
+          const fieldName = prefix ? `${prefix}.${key}` : key;
+
+          if (key === 'media') {
+            // Skip media, handle separately
+            return;
+          }
+
+          if (value === undefined || value === null) {
+            return;
+          }
+
+          if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob) && !Array.isArray(value)) {
+            // Recursively handle nested objects
+            appendToFormData(value, fieldName);
+          } else if (Array.isArray(value)) {
+            // Handle arrays
+            value.forEach((item, index) => {
+              if (typeof item === 'object' && !(item instanceof File) && !(item instanceof Blob)) {
+                appendToFormData(item, `${fieldName}[${index}]`);
+              } else {
+                formData.append(`${fieldName}[${index}]`, item);
+              }
+            });
+          } else {
+            formData.append(fieldName, value as string | Blob);
+          }
+        });
+      };
+
+      // Append all fields using the helper function
+      appendToFormData(reportData);
+
+      // Append media files
+      if (reportData.media && Array.isArray(reportData.media)) {
+        reportData.media.forEach((file: File) => {
+          formData.append('media', file);
+        });
+      }
+
+      // Debug: Log FormData contents
+      console.log('createReport: Sending FormData to backend');
+      console.log('FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+
+      const response = await apiService['handleRequest']<Report>(
+        apiService['api'].post('/reports', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+      );
+
+      console.log('createReport: Backend response:', response);
+      return response;
+
+    } catch (error) {
+      console.error('createReport: Error occurred:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create report'
+      };
     }
-
-    return apiService['handleRequest']<Report>( // Added Report type
-      apiService['api'].post('/reports', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-    );
   },
 
   updateReport: async (id: string, reportData: Partial<Report>): Promise<ApiResponse<Report>> => {
@@ -355,31 +426,102 @@ export const reportsApi = {
   // Submit anonymous report
   submitAnonymousReport: async (reportData: any): Promise<ApiResponse<any>> => {
     const apiService = new ApiService();
-    const formData = new FormData();
 
-    // Append text fields
-    Object.entries(reportData).forEach(([key, value]) => {
-      if (key !== 'media' && value !== undefined && value !== null) {
-        if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob)) {
-          formData.append(key, JSON.stringify(value));
-        } else {
-          formData.append(key, value as string | Blob);
-        }
+    try {
+      console.log('submitAnonymousReport: Starting anonymous report creation with data:', reportData);
+
+      // Validate required fields before sending
+      const validationErrors = [];
+      if (!reportData.title || reportData.title.trim().length < 10) {
+        validationErrors.push('Title must be at least 10 characters long');
       }
-    });
+      if (!reportData.description || reportData.description.trim().length < 50) {
+        validationErrors.push('Description must be at least 50 characters long');
+      }
+      if (!reportData.category) {
+        validationErrors.push('Category is required');
+      }
+      if (!reportData.incidentDate) {
+        validationErrors.push('Incident date is required');
+      }
+      if (!reportData.location || !reportData.location.address || !reportData.location.city || !reportData.location.state) {
+        validationErrors.push('Complete location (address, city, state) is required');
+      }
 
-    // Append media files
-    if (reportData.media && Array.isArray(reportData.media)) {
-      reportData.media.forEach((file: File) => {
-        formData.append('media', file);
-      });
+      if (validationErrors.length > 0) {
+        return {
+          success: false,
+          error: validationErrors.join('; ')
+        };
+      }
+
+      const formData = new FormData();
+
+      // Helper function to append nested objects with dot notation
+      const appendToFormData = (obj: any, prefix = '') => {
+        Object.entries(obj).forEach(([key, value]) => {
+          const fieldName = prefix ? `${prefix}.${key}` : key;
+
+          if (key === 'media') {
+            // Skip media, handle separately
+            return;
+          }
+
+          if (value === undefined || value === null) {
+            return;
+          }
+
+          if (typeof value === 'object' && !(value instanceof File) && !(value instanceof Blob) && !Array.isArray(value)) {
+            // Recursively handle nested objects
+            appendToFormData(value, fieldName);
+          } else if (Array.isArray(value)) {
+            // Handle arrays
+            value.forEach((item, index) => {
+              if (typeof item === 'object' && !(item instanceof File) && !(item instanceof Blob)) {
+                appendToFormData(item, `${fieldName}[${index}]`);
+              } else {
+                formData.append(`${fieldName}[${index}]`, item);
+              }
+            });
+          } else {
+            formData.append(fieldName, value as string | Blob);
+          }
+        });
+      };
+
+      // Append all fields using the helper function
+      appendToFormData(reportData);
+
+      // Append media files
+      if (reportData.media && Array.isArray(reportData.media)) {
+        reportData.media.forEach((file: File) => {
+          formData.append('media', file);
+        });
+      }
+
+      // Debug: Log FormData contents
+      console.log('submitAnonymousReport: Sending FormData to backend');
+      console.log('FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+
+      const response = await apiService['handleRequest'](
+        apiService['api'].post('/reports/anonymous', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
+      );
+
+      console.log('submitAnonymousReport: Backend response:', response);
+      return response;
+
+    } catch (error) {
+      console.error('submitAnonymousReport: Error occurred:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to submit anonymous report'
+      };
     }
-
-    return apiService['handleRequest'](
-      apiService['api'].post('/reports/anonymous', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-    );
   },
 
   // Get user's own reports

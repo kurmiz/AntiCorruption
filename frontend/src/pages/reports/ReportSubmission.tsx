@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { reportsApi } from '../../services/api';
 import '../../styles/report-submission.css';
+import '../../styles/report-preview.css';
+import '../../styles/datetime-picker.css';
 import {
   AlertTriangle,
   Upload,
@@ -18,6 +20,7 @@ import FormField from '../../components/ui/FormField';
 import DateTimePicker from '../../components/ui/DateTimePicker';
 import Select from '../../components/ui/Select';
 import ProgressIndicator from '../../components/ui/ProgressIndicator';
+import ReportPreview from '../../components/ui/ReportPreview';
 import { ReportCategory } from '../../types';
 
 interface Location {
@@ -73,11 +76,32 @@ const ReportSubmission: React.FC = () => {
     watch,
     setValue,
     formState: { errors }
-  } = useForm<ReportForm>();
+  } = useForm<ReportForm>({
+    defaultValues: {
+      title: '',
+      description: '',
+      category: '',
+      incidentDate: '',
+      incidentTime: '',
+      location: {
+        address: '',
+        city: '',
+        state: '',
+        country: 'India'
+      },
+      involvedParties: [],
+      estimatedLoss: '',
+      currency: 'INR',
+      urgencyLevel: 5,
+      tags: []
+    },
+    mode: 'onChange' // Enable real-time validation
+  });
 
   const watchedCategory = watch('category');
   const watchedTitle = watch('title');
   const watchedDescription = watch('description');
+  const watchedFormData = watch(); // Watch all form data at once
 
   // Form steps configuration
   const formSteps = [
@@ -136,8 +160,7 @@ const ReportSubmission: React.FC = () => {
   // Step navigation functions
   const handleNextStep = () => {
     if (!canProceedToNextStep()) {
-      setError('Please fill in all required fields before proceeding');
-      return;
+      return; // Error is already set in canProceedToNextStep
     }
     setError('');
 
@@ -151,6 +174,11 @@ const ReportSubmission: React.FC = () => {
     }
   };
 
+  const handleEditFromPreview = (step: string) => {
+    setCurrentStep(step);
+    setError('');
+  };
+
   const handlePreviousStep = () => {
     const currentIndex = formSteps.findIndex(step => step.id === currentStep);
     if (currentIndex > 0) {
@@ -159,24 +187,91 @@ const ReportSubmission: React.FC = () => {
     }
   };
 
-  const canProceedToNextStep = () => {
+  const validateCurrentStep = () => {
+    const errors: string[] = [];
+
     switch (currentStep) {
       case 'basic':
-        return !!watchedTitle?.trim() && !!watchedDescription?.trim() && !!watchedCategory;
+        if (!watchedTitle?.trim()) {
+          errors.push('Report title is required');
+        } else if (watchedTitle.trim().length < 10) {
+          errors.push('Title must be at least 10 characters long');
+        }
+
+        if (!watchedDescription?.trim()) {
+          errors.push('Description is required');
+        } else if (watchedDescription.trim().length < 50) {
+          errors.push('Description must be at least 50 characters long');
+        }
+
+        if (!watchedCategory) {
+          errors.push('Category is required');
+        }
+        break;
+
       case 'datetime':
-        const date = watch('incidentDate');
-        const address = watch('location.address');
-        const city = watch('location.city');
-        const state = watch('location.state');
-        return !!date && !!address?.trim() && !!city?.trim() && !!state?.trim();
+        const date = watchedFormData.incidentDate;
+        const address = watchedFormData.location?.address;
+        const city = watchedFormData.location?.city;
+        const state = watchedFormData.location?.state;
+        const country = watchedFormData.location?.country;
+
+        if (!date) {
+          errors.push('Incident date is required');
+        }
+
+        if (!address?.trim()) {
+          errors.push('Address is required');
+        }
+
+        if (!city?.trim()) {
+          errors.push('City is required');
+        }
+
+        if (!state?.trim()) {
+          errors.push('State is required');
+        }
+
+        if (!country?.trim()) {
+          errors.push('Country is required');
+        }
+        break;
+
       case 'evidence':
-        // Evidence is optional
-        return true;
+        // Evidence is optional, no validation needed
+        break;
+
       case 'review':
-        return true;
-      default:
-        return false;
+        // Final validation before submission
+        if (!watchedFormData.title?.trim() || watchedFormData.title.trim().length < 10) {
+          errors.push('Valid title is required');
+        }
+        if (!watchedFormData.description?.trim() || watchedFormData.description.trim().length < 50) {
+          errors.push('Valid description is required');
+        }
+        if (!watchedFormData.category) {
+          errors.push('Category is required');
+        }
+        if (!watchedFormData.incidentDate) {
+          errors.push('Incident date is required');
+        }
+        if (!watchedFormData.location?.address?.trim() || !watchedFormData.location?.city?.trim() || !watchedFormData.location?.state?.trim()) {
+          errors.push('Complete location information is required');
+        }
+        break;
     }
+
+    return errors;
+  };
+
+  const canProceedToNextStep = () => {
+    const validationErrors = validateCurrentStep();
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join('; '));
+      return false;
+    }
+    setError('');
+    return true;
   };
 
   const onSubmit = async (data: ReportForm) => {
@@ -184,18 +279,18 @@ const ReportSubmission: React.FC = () => {
       setIsLoading(true);
       setError('');
 
-      // Prepare the report data
+      // Prepare the report data with proper validation
       const reportData = {
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        incidentDate: data.incidentDate,
+        title: data.title?.trim() || '',
+        description: data.description?.trim() || '',
+        category: data.category || '',
+        incidentDate: data.incidentDate || '',
         incidentTime: data.incidentTime || '',
         location: {
-          address: data.location?.address || '',
-          city: data.location?.city || '',
-          state: data.location?.state || '',
-          country: data.location?.country || 'India',
+          address: data.location?.address?.trim() || '',
+          city: data.location?.city?.trim() || '',
+          state: data.location?.state?.trim() || '',
+          country: data.location?.country?.trim() || 'India',
           coordinates: selectedLocation ? {
             latitude: selectedLocation.lat,
             longitude: selectedLocation.lng
@@ -209,6 +304,39 @@ const ReportSubmission: React.FC = () => {
         tags: data.tags || [],
         media: selectedFiles
       };
+
+      // Validate required fields before submission
+      const validationErrors = [];
+      if (!reportData.title || reportData.title.length < 10) {
+        validationErrors.push('Title must be at least 10 characters long');
+      }
+      if (!reportData.description || reportData.description.length < 50) {
+        validationErrors.push('Description must be at least 50 characters long');
+      }
+      if (!reportData.category) {
+        validationErrors.push('Category is required');
+      }
+      if (!reportData.incidentDate) {
+        validationErrors.push('Incident date is required');
+      }
+      if (!reportData.location.address) {
+        validationErrors.push('Address is required');
+      }
+      if (!reportData.location.city) {
+        validationErrors.push('City is required');
+      }
+      if (!reportData.location.state) {
+        validationErrors.push('State is required');
+      }
+      if (!reportData.location.country) {
+        validationErrors.push('Country is required');
+      }
+
+      if (validationErrors.length > 0) {
+        setError(validationErrors.join('; '));
+        setIsLoading(false);
+        return;
+      }
 
       console.log('Submitting report data:', JSON.stringify(reportData, null, 2));
       console.log('Selected files:', selectedFiles);
@@ -401,8 +529,10 @@ const ReportSubmission: React.FC = () => {
                     type="date"
                     max={new Date().toISOString().split('T')[0]}
                     min="2020-01-01"
-                    value={watch('incidentDate') || ''}
+                    value={watchedFormData.incidentDate || ''}
                     onChange={(value) => setValue('incidentDate', value)}
+                    placeholder="Select the date of incident"
+                    className={errors.incidentDate ? 'error' : ''}
                   />
                 </FormField>
 
@@ -415,8 +545,9 @@ const ReportSubmission: React.FC = () => {
                     type="time"
                     min="00:00"
                     max="23:59"
-                    value={watch('incidentTime') || ''}
+                    value={watchedFormData.incidentTime || ''}
                     onChange={(value) => setValue('incidentTime', value)}
+                    placeholder="Select the time of incident"
                   />
                 </FormField>
               </div>
@@ -472,10 +603,12 @@ const ReportSubmission: React.FC = () => {
                 >
                   <input
                     {...register('location.country', {
-                      required: 'Country is required'
+                      required: 'Country is required',
+                      value: 'India' // Set default value
                     })}
                     type="text"
                     placeholder="Country"
+                    defaultValue="India"
                   />
                 </FormField>
               </div>
@@ -615,85 +748,33 @@ const ReportSubmission: React.FC = () => {
           {/* Review Section */}
           {currentStep === 'review' && (
             <div className="form-section">
-              <div className="form-section-header">
-                <h2 className="form-section-title">
-                  <Shield className="h-5 w-5" />
-                  Review Your Report
-                </h2>
-                <p className="form-section-description">
-                  Please review all the information below before submitting your report. Make sure all details are accurate.
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                {/* Basic Information Review */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Basic Information</h3>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Title:</span>
-                      <p className="text-sm text-gray-900">{watchedTitle || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Category:</span>
-                      <p className="text-sm text-gray-900">
-                        {categoryOptions.find(opt => opt.value === watchedCategory)?.label || 'Not selected'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-gray-500">Description:</span>
-                      <p className="text-sm text-gray-900 mt-1">{watchedDescription || 'Not provided'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Anonymous Reporting */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Reporting Method</h3>
-                  <div className="flex items-center">
-                    <Shield className="h-4 w-4 text-blue-500 mr-2" />
-                    <span className="text-sm text-gray-900">
-                      {isAnonymous ? 'Anonymous Report' : 'Identified Report'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Evidence Review */}
-                {selectedFiles.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Supporting Evidence</h3>
-                    <div className="space-y-2">
-                      {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center text-sm text-gray-700">
-                          <Camera className="h-4 w-4 mr-2 text-blue-500" />
-                          <span>{file.name}</span>
-                          <span className="ml-auto text-xs text-gray-500">
-                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Important Notice */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex">
-                    <AlertTriangle className="h-5 w-5 text-yellow-400 mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="text-sm font-medium text-yellow-800">Important Notice</h3>
-                      <div className="mt-2 text-sm text-yellow-700">
-                        <ul className="list-disc list-inside space-y-1">
-                          <li>Your report will be reviewed by law enforcement officials</li>
-                          <li>All information is treated confidentially according to applicable laws</li>
-                          <li>False reports may result in legal consequences</li>
-                          <li>You may be contacted for additional information if needed</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ReportPreview
+                data={{
+                  title: watchedFormData.title || '',
+                  description: watchedFormData.description || '',
+                  category: watchedFormData.category || '',
+                  incidentDate: watchedFormData.incidentDate || '',
+                  incidentTime: watchedFormData.incidentTime,
+                  location: {
+                    address: watchedFormData.location?.address || '',
+                    city: watchedFormData.location?.city || '',
+                    state: watchedFormData.location?.state || '',
+                    country: watchedFormData.location?.country || 'India',
+                    coordinates: selectedLocation ? {
+                      latitude: selectedLocation.lat,
+                      longitude: selectedLocation.lng
+                    } : undefined
+                  },
+                  isAnonymous,
+                  involvedParties: watchedFormData.involvedParties || [],
+                  estimatedLoss: watchedFormData.estimatedLoss ? parseFloat(watchedFormData.estimatedLoss) : undefined,
+                  currency: watchedFormData.currency || 'INR',
+                  urgencyLevel: watchedFormData.urgencyLevel || 5,
+                  tags: watchedFormData.tags || [],
+                  media: selectedFiles
+                }}
+                onEdit={handleEditFromPreview}
+              />
             </div>
           )}
 
@@ -727,7 +808,6 @@ const ReportSubmission: React.FC = () => {
                 type="button"
                 onClick={handleNextStep}
                 className="btn btn-primary"
-                disabled={!canProceedToNextStep()}
               >
                 Next Step
               </button>

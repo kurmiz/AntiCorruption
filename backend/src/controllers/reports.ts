@@ -4,6 +4,35 @@ import { AuthRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { Types } from 'mongoose';
 
+// Helper function to parse FormData with dot notation
+const parseFormDataWithDotNotation = (body: any) => {
+  const result: any = {};
+
+  Object.keys(body).forEach(key => {
+    const value = body[key];
+
+    if (key.includes('.')) {
+      // Handle dot notation (e.g., "location.address")
+      const keys = key.split('.');
+      let current = result;
+
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!current[keys[i]]) {
+          current[keys[i]] = {};
+        }
+        current = current[keys[i]];
+      }
+
+      current[keys[keys.length - 1]] = value;
+    } else {
+      // Handle regular fields
+      result[key] = value;
+    }
+  });
+
+  return result;
+};
+
 // Create a new report
 export const createReport = async (req: AuthRequest, res: Response) => {
   try {
@@ -13,6 +42,9 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       isAnonymous: req.body.isAnonymous,
       user: req.user ? req.user._id : 'anonymous'
     });
+
+    // Parse FormData with dot notation support
+    const parsedBody = parseFormDataWithDotNotation(req.body);
 
     const {
       title,
@@ -27,7 +59,7 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       currency = 'INR',
       urgencyLevel = 5,
       tags = []
-    } = req.body;
+    } = parsedBody;
 
     // Validate required fields
     if (!title || title.trim().length < 10) {
@@ -74,9 +106,20 @@ export const createReport = async (req: AuthRequest, res: Response) => {
 
     // Validate location
     if (!parsedLocation || !parsedLocation.address || !parsedLocation.city || !parsedLocation.state) {
+      logger.warn('Location validation failed', {
+        location: parsedLocation,
+        hasAddress: !!parsedLocation?.address,
+        hasCity: !!parsedLocation?.city,
+        hasState: !!parsedLocation?.state
+      });
       return res.status(400).json({
         success: false,
-        message: 'Location with address, city, and state is required'
+        message: 'Location with address, city, and state is required',
+        details: {
+          address: !parsedLocation?.address ? 'Address is required' : null,
+          city: !parsedLocation?.city ? 'City is required' : null,
+          state: !parsedLocation?.state ? 'State is required' : null
+        }
       });
     }
 

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { reportsApi } from '../../services/api';
 import {
   AlertTriangle,
   FileText,
@@ -14,41 +15,60 @@ import {
 
 const UserDashboard: React.FC = () => {
   const { user } = useAuth();
-
-  // Mock data - replace with actual API calls
-  const stats = {
-    totalReports: 5,
-    pendingReports: 2,
-    resolvedReports: 3,
-    unreadMessages: 1
-  };
+  const [stats, setStats] = useState({
+    totalReports: 0,
+    pendingReports: 0,
+    resolvedReports: 0,
+    unreadMessages: 0
+  });
+  const [recentReports, setRecentReports] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Show empty state if no reports
   const showEmptyState = stats.totalReports === 0;
 
-  const recentReports = [
-    {
-      id: '1',
-      title: 'Bribery at Municipal Office',
-      status: 'pending',
-      createdAt: '2024-01-15',
-      category: 'Bribery'
-    },
-    {
-      id: '2',
-      title: 'Fraudulent Contract Award',
-      status: 'under_investigation',
-      createdAt: '2024-01-10',
-      category: 'Fraud'
-    },
-    {
-      id: '3',
-      title: 'Embezzlement of Public Funds',
-      status: 'resolved',
-      createdAt: '2024-01-05',
-      category: 'Embezzlement'
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
+
+        // Fetch user's reports
+        const reportsResponse = await reportsApi.getMyReports({ page: 1, limit: 5 });
+
+        if (reportsResponse.success && reportsResponse.data) {
+          const reports = reportsResponse.data.reports || reportsResponse.data;
+          setRecentReports(Array.isArray(reports) ? reports : []);
+
+          // Calculate stats from reports
+          const totalReports = Array.isArray(reports) ? reports.length : 0;
+          const pendingReports = Array.isArray(reports) ? reports.filter((r: any) => r.status === 'pending').length : 0;
+          const resolvedReports = Array.isArray(reports) ? reports.filter((r: any) => r.status === 'resolved').length : 0;
+
+          setStats({
+            totalReports,
+            pendingReports,
+            resolvedReports,
+            unreadMessages: 0 // TODO: Implement messages API
+          });
+        } else {
+          console.warn('Failed to fetch reports:', reportsResponse.error);
+          setRecentReports([]);
+        }
+      } catch (err) {
+        console.error('Dashboard data fetch error:', err);
+        setError('Failed to load dashboard data');
+        setRecentReports([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchDashboardData();
     }
-  ];
+  }, [user]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -80,8 +100,34 @@ const UserDashboard: React.FC = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="page-content">
+        <div className="flex items-center justify-center min-h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-content">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex">
+            <AlertTriangle className="h-5 w-5 text-red-400 mr-3 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Error Loading Dashboard</h3>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Section */}
       <div className="dashboard-welcome">
         <h1 className="welcome-title">
