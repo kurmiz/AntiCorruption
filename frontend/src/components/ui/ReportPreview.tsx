@@ -1,12 +1,11 @@
 import React from 'react';
-import { 
-  FileText, 
-  Calendar, 
-  MapPin, 
-  Tag, 
-  AlertTriangle, 
+import {
+  FileText,
+  Calendar,
+  MapPin,
+  Tag,
+  AlertTriangle,
   Shield,
-  Clock,
   DollarSign,
   Users,
   Paperclip
@@ -18,7 +17,6 @@ interface ReportPreviewProps {
     description: string;
     category: string;
     incidentDate: string;
-    incidentTime?: string;
     location: {
       address: string;
       city: string;
@@ -47,18 +45,13 @@ interface ReportPreviewProps {
 }
 
 const ReportPreview: React.FC<ReportPreviewProps> = ({ data, onEdit }) => {
-  const formatDate = (dateString: string, timeString?: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const dateFormatted = date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-    
-    if (timeString) {
-      return `${dateFormatted} at ${timeString}`;
-    }
-    return dateFormatted;
   };
 
   const getCategoryLabel = (category: string) => {
@@ -174,10 +167,10 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ data, onEdit }) => {
           <div className="preview-field">
             <label className="field-label">
               <Calendar className="h-4 w-4" />
-              Incident Date & Time
+              Incident Date
             </label>
             <p className="field-value">
-              {formatDate(data.incidentDate, data.incidentTime)}
+              {formatDate(data.incidentDate)}
             </p>
           </div>
 

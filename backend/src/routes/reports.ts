@@ -152,6 +152,9 @@ const addNoteValidation = [
 // Public routes (for anonymous reports)
 router.post('/anonymous', upload.array('media', 5), createReportValidation, validate, createReport);
 
+// Public route to get reports (for dashboard display)
+router.get('/public', getReports);
+
 // Protected routes (require authentication)
 router.use(protect);
 

@@ -36,11 +36,14 @@ const parseFormDataWithDotNotation = (body: any) => {
 // Create a new report
 export const createReport = async (req: AuthRequest, res: Response) => {
   try {
-    logger.info('Report creation request received', {
+    logger.info('🔍 DEBUGGING: Report creation request received', {
       body: req.body,
       files: req.files ? (req.files as any[]).map(f => ({ filename: f.filename, mimetype: f.mimetype, size: f.size })) : [],
       isAnonymous: req.body.isAnonymous,
-      user: req.user ? req.user._id : 'anonymous'
+      user: req.user ? req.user._id : 'anonymous',
+      headers: req.headers,
+      method: req.method,
+      url: req.url
     });
 
     // Parse FormData with dot notation support
@@ -51,7 +54,6 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       description,
       category,
       incidentDate,
-      incidentTime,
       location,
       isAnonymous = false,
       involvedParties = [],
@@ -143,12 +145,8 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Combine date and time
-    let fullIncidentDate = new Date(incidentDate);
-    if (incidentTime) {
-      const [hours, minutes] = incidentTime.split(':');
-      fullIncidentDate.setHours(parseInt(hours), parseInt(minutes));
-    }
+    // Parse incident date
+    const fullIncidentDate = new Date(incidentDate);
 
     // Handle file uploads
     const evidence: Array<{
@@ -215,17 +213,26 @@ export const createReport = async (req: AuthRequest, res: Response) => {
     }
 
     // Create the report
+    logger.info('🔍 DEBUGGING: Creating report with data', { reportData });
+
     const report = new Report(reportData);
-    await report.save();
+    logger.info('🔍 DEBUGGING: Report object created, now saving...');
+
+    const savedReport = await report.save();
+    logger.info('🔍 DEBUGGING: Report saved successfully to MongoDB', {
+      savedReportId: savedReport._id,
+      savedReportData: savedReport.toObject()
+    });
 
     // Populate reporter information for response
     await report.populate('reporterId', 'firstName lastName email');
 
-    logger.info('Report created successfully', {
+    logger.info('✅ Report created successfully', {
       reportId: report._id,
       category: report.category,
       isAnonymous: report.isAnonymous,
-      reporterId: report.reporterId
+      reporterId: report.reporterId,
+      mongoDbId: savedReport._id
     });
 
     res.status(201).json({

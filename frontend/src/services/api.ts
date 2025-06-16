@@ -287,14 +287,22 @@ export const authApi = {
 export const reportsApi = {
   getReports: async (filters?: any, page = 1, limit = 10): Promise<ApiResponse<any>> => {
     const apiService = new ApiService();
+
+    console.log('🔍 DEBUGGING: getReports called with filters:', filters, 'page:', page, 'limit:', limit);
+
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...filters,
     });
-    return apiService['handleRequest'](
-      apiService['api'].get(`/reports?${params}`)
+
+    console.log('🔍 DEBUGGING: Making request to /reports/public');
+    const response = await apiService['handleRequest'](
+      apiService['api'].get(`/reports/public?${params}`)
     );
+
+    console.log('🔍 DEBUGGING: getReports response:', response);
+    return response;
   },
 
   getReport: async (id: string): Promise<ApiResponse<any>> => {
@@ -308,7 +316,8 @@ export const reportsApi = {
     const apiService = new ApiService();
 
     try {
-      console.log('createReport: Starting report creation with data:', reportData);
+      console.log('🔍 DEBUGGING: createReport - Starting report creation with data:', reportData);
+      console.log('🔍 DEBUGGING: createReport - API base URL:', apiService['api'].defaults.baseURL);
 
       // Validate required fields before sending
       const validationErrors = [];
@@ -380,19 +389,23 @@ export const reportsApi = {
       }
 
       // Debug: Log FormData contents
-      console.log('createReport: Sending FormData to backend');
-      console.log('FormData contents:');
+      console.log('🔍 DEBUGGING: createReport - Sending FormData to backend');
+      console.log('🔍 DEBUGGING: FormData contents:');
       for (let [key, value] of formData.entries()) {
         console.log(`  ${key}:`, value);
       }
 
+      console.log('🔍 DEBUGGING: Making POST request to /reports');
       const response = await apiService['handleRequest']<Report>(
         apiService['api'].post('/reports', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         })
       );
 
-      console.log('createReport: Backend response:', response);
+      console.log('🔍 DEBUGGING: createReport - Backend response:', response);
+      console.log('🔍 DEBUGGING: Response success:', response.success);
+      console.log('🔍 DEBUGGING: Response data:', response.data);
+
       return response;
 
     } catch (error) {

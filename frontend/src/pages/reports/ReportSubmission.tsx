@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { reportsApi } from '../../services/api';
 import '../../styles/report-submission.css';
 import '../../styles/report-preview.css';
-import '../../styles/datetime-picker.css';
 import {
   AlertTriangle,
   Upload,
@@ -17,7 +16,6 @@ import {
 } from 'lucide-react';
 import MapPicker from '../../components/ui/MapPicker';
 import FormField from '../../components/ui/FormField';
-import DateTimePicker from '../../components/ui/DateTimePicker';
 import Select from '../../components/ui/Select';
 import ProgressIndicator from '../../components/ui/ProgressIndicator';
 import ReportPreview from '../../components/ui/ReportPreview';
@@ -82,7 +80,6 @@ const ReportSubmission: React.FC = () => {
       description: '',
       category: '',
       incidentDate: '',
-      incidentTime: '',
       location: {
         address: '',
         city: '',
@@ -285,7 +282,6 @@ const ReportSubmission: React.FC = () => {
         description: data.description?.trim() || '',
         category: data.category || '',
         incidentDate: data.incidentDate || '',
-        incidentTime: data.incidentTime || '',
         location: {
           address: data.location?.address?.trim() || '',
           city: data.location?.city?.trim() || '',
@@ -347,16 +343,24 @@ const ReportSubmission: React.FC = () => {
         ? await reportsApi.submitAnonymousReport(reportData)
         : await reportsApi.createReport(reportData);
 
-      console.log('Report submission response:', JSON.stringify(response, null, 2));
+      console.log('🔍 DEBUGGING: Report submission response:', JSON.stringify(response, null, 2));
+      console.log('🔍 DEBUGGING: Response success status:', response.success);
+      console.log('🔍 DEBUGGING: Response data:', response.data);
+      console.log('🔍 DEBUGGING: Response error:', response.error);
 
-      if (response.success) {
+      if (response.success && response.data) {
+        console.log('✅ DEBUGGING: Report submitted successfully!');
+        console.log('✅ DEBUGGING: Report ID:', response.data.report?.id);
+
         // Show success message
-        alert('Report submitted successfully! You will be redirected to your reports.');
-        // Redirect to reports page
+        alert(`Report submitted successfully! Report ID: ${response.data.report?.id || 'Unknown'}. You will be redirected to your dashboard.`);
+
+        // Redirect to dashboard
         window.location.href = '/dashboard';
       } else {
-        console.error('Report submission failed:', response);
-        setError(response.error || response.message || 'Failed to submit report');
+        console.error('❌ DEBUGGING: Report submission failed:', response);
+        console.error('❌ DEBUGGING: Error details:', response.error);
+        setError(response.error || response.message || 'Failed to submit report. Please check the console for details.');
       }
     } catch (err) {
       console.error('Report submission error:', err);
@@ -522,32 +526,15 @@ const ReportSubmission: React.FC = () => {
                   error={errors.incidentDate?.message}
                   hint="When did the incident occur?"
                 >
-                  <DateTimePicker
+                  <input
                     {...register('incidentDate', {
                       required: 'Incident date is required'
                     })}
                     type="date"
                     max={new Date().toISOString().split('T')[0]}
                     min="2020-01-01"
-                    value={watchedFormData.incidentDate || ''}
-                    onChange={(value) => setValue('incidentDate', value)}
+                    className={`form-input ${errors.incidentDate ? 'error' : ''}`}
                     placeholder="Select the date of incident"
-                    className={errors.incidentDate ? 'error' : ''}
-                  />
-                </FormField>
-
-                <FormField
-                  label="Incident Time"
-                  error={errors.incidentTime?.message}
-                  hint="Approximate time when the incident occurred (optional)"
-                >
-                  <DateTimePicker
-                    type="time"
-                    min="00:00"
-                    max="23:59"
-                    value={watchedFormData.incidentTime || ''}
-                    onChange={(value) => setValue('incidentTime', value)}
-                    placeholder="Select the time of incident"
                   />
                 </FormField>
               </div>
@@ -754,7 +741,6 @@ const ReportSubmission: React.FC = () => {
                   description: watchedFormData.description || '',
                   category: watchedFormData.category || '',
                   incidentDate: watchedFormData.incidentDate || '',
-                  incidentTime: watchedFormData.incidentTime,
                   location: {
                     address: watchedFormData.location?.address || '',
                     city: watchedFormData.location?.city || '',

@@ -34,17 +34,24 @@ const UserDashboard: React.FC = () => {
         setIsLoading(true);
         setError('');
 
-        // Fetch user's reports
-        const reportsResponse = await reportsApi.getMyReports({ page: 1, limit: 5 });
+        // Fetch all reports (including anonymous ones for testing)
+        console.log('🔍 DEBUGGING: Fetching reports for dashboard...');
+        const reportsResponse = await reportsApi.getReports({}, 1, 5);
+
+        console.log('🔍 DEBUGGING: Reports response:', reportsResponse);
 
         if (reportsResponse.success && reportsResponse.data) {
           const reports = reportsResponse.data.reports || reportsResponse.data;
+          console.log('🔍 DEBUGGING: Extracted reports:', reports);
+
           setRecentReports(Array.isArray(reports) ? reports : []);
 
           // Calculate stats from reports
           const totalReports = Array.isArray(reports) ? reports.length : 0;
           const pendingReports = Array.isArray(reports) ? reports.filter((r: any) => r.status === 'pending').length : 0;
           const resolvedReports = Array.isArray(reports) ? reports.filter((r: any) => r.status === 'resolved').length : 0;
+
+          console.log('🔍 DEBUGGING: Calculated stats:', { totalReports, pendingReports, resolvedReports });
 
           setStats({
             totalReports,
@@ -53,7 +60,7 @@ const UserDashboard: React.FC = () => {
             unreadMessages: 0 // TODO: Implement messages API
           });
         } else {
-          console.warn('Failed to fetch reports:', reportsResponse.error);
+          console.warn('❌ DEBUGGING: Failed to fetch reports:', reportsResponse.error);
           setRecentReports([]);
         }
       } catch (err) {
