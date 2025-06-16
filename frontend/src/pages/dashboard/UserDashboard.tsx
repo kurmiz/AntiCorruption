@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { reportsApi } from '../../services/api';
+import TimelineFeed from '../../components/ui/TimelineFeed';
 import {
   AlertTriangle,
   FileText,
@@ -12,6 +13,7 @@ import {
   Plus,
   TrendingUp
 } from 'lucide-react';
+import '../../styles/report-post.css';
 
 const UserDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -301,63 +303,9 @@ const UserDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Recent Reports */}
-      <div className="recent-reports">
-        <div className="recent-reports-header">
-          <div className="flex items-center justify-between">
-            <h2 className="recent-reports-title">Recent Reports</h2>
-            <Link to="/profile/reports" className="recent-reports-link">
-              View all
-            </Link>
-          </div>
-        </div>
-        <div>
-          {recentReports.map((report) => (
-            <div key={report.id} className="report-item">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="text-sm font-medium text-gray-900">
-                    {report.title}
-                  </h3>
-                  <div className="mt-1 flex items-center space-x-4">
-                    <span className="text-xs text-gray-500">
-                      {report.category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(report.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(report.status)}
-                  <span className="text-sm text-gray-600">
-                    {getStatusText(report.status)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        {recentReports.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-state-icon">
-              <FileText className="w-full h-full" />
-            </div>
-            <h3>No reports submitted yet</h3>
-            <p>
-              Start making a difference by reporting corruption incidents.<br />
-              Your voice matters in creating a transparent society.
-            </p>
-            <Link
-              to="/reports/new"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all duration-200 hover:transform hover:scale-105"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Submit Your First Report
-            </Link>
-          </div>
-        )}
-      </div>
+      {/* Timeline Feed - Facebook-like Posts */}
+      <TimelineFeed className="dashboard-timeline" />
+
     </div>
   );
 };

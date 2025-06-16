@@ -338,6 +338,8 @@ export const getReports = async (req: AuthRequest, res: Response) => {
       Report.countDocuments(filter)
     ]);
 
+    console.log('🔍 DEBUGGING: Transforming reports for response');
+
     res.json({
       success: true,
       data: {
@@ -353,6 +355,7 @@ export const getReports = async (req: AuthRequest, res: Response) => {
           isAnonymous: report.isAnonymous,
           reporter: report.isAnonymous ? null : report.reporterId,
           assignedTo: report.assignedTo,
+          evidence: report.evidence || [], // Include evidence for media display
           viewCount: report.viewCount,
           createdAt: report.createdAt,
           updatedAt: report.updatedAt
