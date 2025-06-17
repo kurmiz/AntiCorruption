@@ -7,7 +7,7 @@ export interface IReport extends Document {
   description: string;
   category: 'bribery' | 'fraud' | 'embezzlement' | 'abuse_of_power' | 'nepotism' | 'other';
   priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'under_investigation' | 'resolved' | 'rejected' | 'closed';
+  status: 'pending' | 'draft' | 'under_investigation' | 'resolved' | 'rejected' | 'closed';
   
   // Reporter Information
   reporterId?: Types.ObjectId; // Optional for anonymous reports
@@ -16,6 +16,10 @@ export interface IReport extends Document {
     email?: string;
     phone?: string;
     preferredMethod: 'email' | 'phone' | 'none';
+  };
+  contactInfo?: {
+    email?: string;
+    phone?: string;
   };
   
   // Incident Details
@@ -90,6 +94,14 @@ export interface IReport extends Document {
   currency?: string;
   urgencyLevel: number; // 1-10 scale
   publicVisibility: boolean;
+
+  // Additional Submit Report Fields
+  departmentInvolved?: string;
+  monetaryValue?: number;
+  witnesses?: string[];
+  previousComplaints?: boolean;
+  termsAccepted: boolean;
+  isDraft?: boolean;
   
   // Tracking
   viewCount: number;
@@ -152,7 +164,7 @@ const reportSchema = new Schema<IReport>({
   },
   status: {
     type: String,
-    enum: ['pending', 'under_investigation', 'resolved', 'rejected', 'closed'],
+    enum: ['pending', 'draft', 'under_investigation', 'resolved', 'rejected', 'closed'],
     default: 'pending',
     index: true,
   },
@@ -183,6 +195,18 @@ const reportSchema = new Schema<IReport>({
       type: String,
       enum: ['email', 'phone', 'none'],
       default: 'email',
+    }
+  },
+  contactInfo: {
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address'],
+    },
+    phone: {
+      type: String,
+      trim: true,
     }
   },
   
@@ -334,7 +358,7 @@ const reportSchema = new Schema<IReport>({
     status: {
       type: String,
       required: true,
-      enum: ['pending', 'under_investigation', 'resolved', 'rejected', 'closed'],
+      enum: ['pending', 'draft', 'under_investigation', 'resolved', 'rejected', 'closed'],
     },
     changedBy: {
       type: Schema.Types.ObjectId,
@@ -412,6 +436,35 @@ const reportSchema = new Schema<IReport>({
   publicVisibility: {
     type: Boolean,
     default: false,
+  },
+
+  // Additional Submit Report Fields
+  departmentInvolved: {
+    type: String,
+    trim: true,
+    index: true,
+  },
+  monetaryValue: {
+    type: Number,
+    min: 0,
+  },
+  witnesses: [{
+    type: String,
+    trim: true,
+  }],
+  previousComplaints: {
+    type: Boolean,
+    default: false,
+  },
+  termsAccepted: {
+    type: Boolean,
+    required: [true, 'Terms and conditions must be accepted'],
+    default: false,
+  },
+  isDraft: {
+    type: Boolean,
+    default: false,
+    index: true,
   },
 
   // Tracking

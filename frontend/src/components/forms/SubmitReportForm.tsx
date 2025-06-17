@@ -506,7 +506,371 @@ const SubmitReportForm: React.FC<SubmitReportFormProps> = ({
           </div>
         </div>
 
-        {/* Continue with more sections... */}
+        {/* Section 2: Optional Information */}
+        <div className="form-section">
+          <div className="section-header">
+            <h2 className="section-title">
+              <Info className="h-5 w-5" />
+              Additional Information
+            </h2>
+            <p className="section-subtitle">Optional details that help with investigation</p>
+          </div>
+
+          <div className="form-grid">
+            {/* Persons Involved */}
+            <div className="form-group">
+              <label className="form-label">
+                <Users className="h-4 w-4" />
+                Names of Involved Persons
+                <span className="help-text">Officials, suspects, or other parties</span>
+              </label>
+              <Controller
+                name="personsInvolved"
+                control={control}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    rows={3}
+                    className="form-textarea"
+                    placeholder="List names, positions, and roles of people involved..."
+                  />
+                )}
+              />
+            </div>
+
+            {/* Department */}
+            <div className="form-group">
+              <label className="form-label">
+                <Building className="h-4 w-4" />
+                Department/Agency Involved
+                <span className="help-text">Which government department or agency?</span>
+              </label>
+              <Controller
+                name="departmentInvolved"
+                control={control}
+                render={({ field }) => (
+                  <select {...field} className="form-select">
+                    <option value="">Select department</option>
+                    <option value="police">Police Department</option>
+                    <option value="municipal">Municipal Corporation</option>
+                    <option value="revenue">Revenue Department</option>
+                    <option value="transport">Transport Department</option>
+                    <option value="education">Education Department</option>
+                    <option value="health">Health Department</option>
+                    <option value="judiciary">Judiciary</option>
+                    <option value="customs">Customs Department</option>
+                    <option value="taxation">Taxation Department</option>
+                    <option value="other">Other</option>
+                  </select>
+                )}
+              />
+            </div>
+
+            {/* Monetary Amount */}
+            <div className="form-group">
+              <label className="form-label">
+                <DollarSign className="h-4 w-4" />
+                Monetary Amount Involved
+                <span className="help-text">Bribe amount or financial loss (in INR)</span>
+              </label>
+              <Controller
+                name="monetaryValue"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="form-input"
+                    placeholder="0.00"
+                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Witnesses */}
+            <div className="form-group">
+              <label className="form-label">
+                <Eye className="h-4 w-4" />
+                Witnesses (if any)
+                <span className="help-text">People who saw or know about the incident</span>
+              </label>
+              <Controller
+                name="witnesses"
+                control={control}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    rows={3}
+                    className="form-textarea"
+                    placeholder="Names and contact information of witnesses..."
+                  />
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Previous Complaints */}
+          <div className="form-group">
+            <label className="checkbox-label">
+              <Controller
+                name="previousComplaints"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="checkbox"
+                    checked={field.value}
+                    className="checkbox"
+                  />
+                )}
+              />
+              <div className="checkbox-content">
+                <span className="checkbox-title">Previous Complaints</span>
+                <span className="checkbox-description">
+                  Have you reported this incident before to any authority?
+                </span>
+              </div>
+            </label>
+          </div>
+
+          {/* Urgency Level */}
+          <div className="form-group">
+            <label className="form-label">
+              <AlertTriangle className="h-4 w-4" />
+              Urgency Level:
+              <span className={`urgency-badge ${getUrgencyColor(watchedValues.urgencyLevel || 5)}`}>
+                {getUrgencyLabel(watchedValues.urgencyLevel || 5)}
+              </span>
+            </label>
+            <Controller
+              name="urgencyLevel"
+              control={control}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  type="range"
+                  min="1"
+                  max="10"
+                  className="urgency-slider"
+                  onChange={(e) => field.onChange(parseInt(e.target.value))}
+                />
+              )}
+            />
+            <div className="urgency-scale">
+              <span>Low (1)</span>
+              <span>Medium (5)</span>
+              <span>High (8)</span>
+              <span>Critical (10)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Evidence Upload */}
+        <div className="form-section">
+          <div className="section-header">
+            <h2 className="section-title">
+              <Upload className="h-5 w-5" />
+              Evidence Files
+            </h2>
+            <p className="section-subtitle">Upload supporting documents, images, or videos</p>
+          </div>
+
+          <div className="file-upload-area" onClick={() => fileInputRef.current?.click()}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+              onChange={handleFileSelect}
+              className="file-input"
+              style={{ display: 'none' }}
+            />
+            <div className="upload-prompt">
+              <Camera className="h-8 w-8 text-gray-400" />
+              <p>Click to upload evidence files</p>
+              <span>Images, videos, documents (max 5 files, 50MB each)</span>
+            </div>
+          </div>
+
+          {/* File Previews */}
+          {files.length > 0 && (
+            <div className="file-previews">
+              {files.map((file, index) => (
+                <div key={index} className="file-preview">
+                  <div className="file-icon">
+                    {file.type.startsWith('image/') && <Camera className="h-4 w-4" />}
+                    {file.type.startsWith('video/') && <Video className="h-4 w-4" />}
+                    {file.type.includes('pdf') && <FileText className="h-4 w-4" />}
+                    {!file.type.startsWith('image/') && !file.type.startsWith('video/') && !file.type.includes('pdf') && <Paperclip className="h-4 w-4" />}
+                  </div>
+                  <span className="file-name">{file.name}</span>
+                  <span className="file-size">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="remove-file"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 4: Contact Information & Privacy */}
+        <div className="form-section">
+          <div className="section-header">
+            <h2 className="section-title">
+              <Shield className="h-5 w-5" />
+              Privacy & Contact
+            </h2>
+            <p className="section-subtitle">Choose how you want to be contacted</p>
+          </div>
+
+          {/* Anonymous Option */}
+          <div className="form-group">
+            <label className="checkbox-label">
+              <Controller
+                name="isAnonymous"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="checkbox"
+                    checked={field.value}
+                    className="checkbox"
+                  />
+                )}
+              />
+              <div className="checkbox-content">
+                <span className="checkbox-title">Submit Anonymously</span>
+                <span className="checkbox-description">
+                  Your identity will be protected. You can still track your report with a unique ID.
+                </span>
+              </div>
+            </label>
+          </div>
+
+          {/* Contact Information (only if not anonymous) */}
+          {!watchedValues.isAnonymous && (
+            <div className="contact-section">
+              <h3 className="subsection-title">Contact Information</h3>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label">
+                    Email Address
+                    <span className="help-text">For updates and follow-up</span>
+                  </label>
+                  <Controller
+                    name="contactInfo.email"
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="email"
+                        className="form-input"
+                        placeholder="your.email@example.com"
+                      />
+                    )}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Phone Number
+                    <span className="help-text">Optional, for urgent matters</span>
+                  </label>
+                  <Controller
+                    name="contactInfo.phone"
+                    control={control}
+                    render={({ field }) => (
+                      <input
+                        {...field}
+                        type="tel"
+                        className="form-input"
+                        placeholder="+91 9876543210"
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Terms and Conditions */}
+          <div className="form-group">
+            <label className="checkbox-label">
+              <Controller
+                name="termsAccepted"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="checkbox"
+                    checked={field.value}
+                    className="checkbox"
+                  />
+                )}
+              />
+              <div className="checkbox-content">
+                <span className="checkbox-title">Accept Terms and Conditions *</span>
+                <span className="checkbox-description">
+                  I confirm that the information provided is true and accurate to the best of my knowledge.
+                  I understand that providing false information is a punishable offense.
+                </span>
+              </div>
+            </label>
+            {errors.termsAccepted && <span className="error-message">{errors.termsAccepted.message}</span>}
+          </div>
+        </div>
+
+        {/* Upload Progress */}
+        {uploading && (
+          <div className="upload-progress">
+            <div className="progress-bar">
+              <div
+                className="progress-fill"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <span>Uploading... {uploadProgress}%</span>
+          </div>
+        )}
+
+        {/* Form Actions */}
+        <div className="form-actions">
+          <button
+            type="button"
+            onClick={handleSaveAsDraft}
+            disabled={isSubmitting || uploading}
+            className="draft-btn"
+          >
+            <Save className="h-4 w-4" />
+            Save as Draft
+          </button>
+
+          <button
+            type="submit"
+            disabled={isSubmitting || uploading || !watchedValues.termsAccepted}
+            className="submit-btn"
+          >
+            {isSubmitting || uploading ? (
+              <>
+                <Clock className="h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Submit Report
+              </>
+            )}
+          </button>
+        </div>
       </form>
     </div>
   );

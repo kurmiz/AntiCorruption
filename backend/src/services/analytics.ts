@@ -224,7 +224,7 @@ export class AnalyticsService {
 
   // Category analytics
   private async getCategoryAnalytics(filters?: any): Promise<CategoryAnalytics[]> {
-    const pipeline = [
+    const pipeline: any[] = [
       { $match: this.buildFilter(filters) },
       {
         $group: {
@@ -241,24 +241,24 @@ export class AnalyticsService {
           }
         }
       },
-      { $sort: { count: -1 } }
+      { $sort: { count: -1 as any } }
     ];
 
     const results = await Report.aggregate(pipeline);
     const total = results.reduce((sum, item) => sum + item.count, 0);
 
-    return results.map(item => ({
+    return Promise.all(results.map(async item => ({
       category: item._id,
       count: item.count,
       percentage: total > 0 ? (item.count / total) * 100 : 0,
       trend: await this.calculateCategoryTrend(item._id, filters),
       avgResolutionTime: item.avgResolutionTime || 0
-    }));
+    })));
   }
 
   // Location analytics with geospatial data
   private async getLocationAnalytics(filters?: any): Promise<LocationAnalytics[]> {
-    const pipeline = [
+    const pipeline: any[] = [
       { $match: this.buildFilter(filters) },
       {
         $group: {
@@ -273,7 +273,7 @@ export class AnalyticsService {
           coordinates: { $first: '$location.coordinates' }
         }
       },
-      { $sort: { count: -1 } },
+      { $sort: { count: -1 as any } },
       { $limit: 50 }
     ];
 

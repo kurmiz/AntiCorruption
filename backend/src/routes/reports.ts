@@ -1,10 +1,10 @@
 import express from 'express';
 import { body, query } from 'express-validator';
-import { 
-  createReport, 
-  getReports, 
-  getReport, 
-  updateReport, 
+import {
+  createReport,
+  getReports,
+  getReport,
+  updateReport,
   deleteReport,
   updateReportStatus,
   assignReport,
@@ -13,6 +13,15 @@ import {
 } from '../controllers/reports';
 import { protect, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import {
+  validateReportInput,
+  validateReportUpdate,
+  validateReportId,
+  handleValidationErrors,
+  validateFileUpload,
+  auditLog,
+  addSecurityHeaders
+} from '../middleware/validation';
 import multer from 'multer';
 import path from 'path';
 
@@ -147,10 +156,20 @@ const addNoteValidation = [
     .withMessage('isPublic must be a boolean'),
 ];
 
+// Apply security headers to all routes
+router.use(addSecurityHeaders);
+
 // Routes
 
 // Public routes (for anonymous reports)
-router.post('/anonymous', upload.array('media', 5), createReportValidation, validate, createReport);
+router.post('/anonymous',
+  upload.array('media', 5),
+  validateFileUpload,
+  validateReportInput,
+  handleValidationErrors,
+  auditLog('anonymous_report_submit'),
+  createReport
+);
 
 // Public route to get reports (for dashboard display)
 router.get('/public', getReports);
@@ -159,7 +178,14 @@ router.get('/public', getReports);
 router.use(protect);
 
 // Create report (authenticated users)
-router.post('/', upload.array('media', 5), createReportValidation, validate, createReport);
+router.post('/',
+  upload.array('media', 5),
+  validateFileUpload,
+  validateReportInput,
+  handleValidationErrors,
+  auditLog('report_submit'),
+  createReport
+);
 
 // Get reports with filtering and pagination
 router.get('/', getReports);
@@ -168,24 +194,60 @@ router.get('/', getReports);
 router.get('/my-reports', getReportsByUser);
 
 // Get specific report
-router.get('/:id', getReport);
+router.get('/:id',
+  validateReportId,
+  handleValidationErrors,
+  auditLog('report_view'),
+  getReport
+);
 
 // Update report (only by reporter or admin/police)
-router.put('/:id', updateReportValidation, validate, updateReport);
+router.put('/:id',
+  validateReportId,
+  upload.array('media', 5),
+  validateFileUpload,
+  validateReportUpdate,
+  handleValidationErrors,
+  auditLog('report_update'),
+  updateReport
+);
 
 // Delete report (only by reporter or admin)
-router.delete('/:id', deleteReport);
+router.delete('/:id',
+  validateReportId,
+  handleValidationErrors,
+  auditLog('report_delete'),
+  deleteReport
+);
 
 // Admin/Police only routes
 router.use(authorize('admin', 'police'));
 
 // Update report status
-router.put('/:id/status', statusUpdateValidation, validate, updateReportStatus);
+router.put('/:id/status',
+  validateReportId,
+  statusUpdateValidation,
+  validate,
+  auditLog('report_status_update'),
+  updateReportStatus
+);
 
 // Assign report to investigator
-router.post('/:id/assign', assignReportValidation, validate, assignReport);
+router.post('/:id/assign',
+  validateReportId,
+  assignReportValidation,
+  validate,
+  auditLog('report_assign'),
+  assignReport
+);
 
 // Add investigation note
-router.post('/:id/notes', addNoteValidation, validate, addReportNote);
+router.post('/:id/notes',
+  validateReportId,
+  addNoteValidation,
+  validate,
+  auditLog('report_note_add'),
+  addReportNote
+);
 
 export default router;

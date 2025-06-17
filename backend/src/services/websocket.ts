@@ -1,4 +1,4 @@
-import { Server as SocketIOServer } from 'socket.io';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
@@ -9,16 +9,6 @@ interface AuthenticatedSocket extends Socket {
   user?: IUser;
   userId?: string;
   userRole?: string;
-}
-
-interface Socket {
-  id: string;
-  handshake: any;
-  emit: (event: string, data: any) => void;
-  join: (room: string) => void;
-  leave: (room: string) => void;
-  disconnect: () => void;
-  on: (event: string, callback: Function) => void;
 }
 
 export class WebSocketService {
@@ -43,7 +33,7 @@ export class WebSocketService {
 
   private setupMiddleware() {
     // Authentication middleware
-    this.io.use(async (socket: AuthenticatedSocket, next) => {
+    this.io.use(async (socket: any, next: any) => {
       try {
         const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
         
@@ -74,7 +64,7 @@ export class WebSocketService {
   }
 
   private setupEventHandlers() {
-    this.io.on('connection', (socket: AuthenticatedSocket) => {
+    this.io.on('connection', (socket: any) => {
       logger.info('User connected to WebSocket', {
         socketId: socket.id,
         userId: socket.userId,
@@ -97,27 +87,27 @@ export class WebSocketService {
       socket.join('public:analytics');
 
       // Handle report submission events
-      socket.on('report:submit', (data) => {
+      socket.on('report:submit', (data: any) => {
         this.handleReportSubmission(socket, data);
       });
 
       // Handle report status updates
-      socket.on('report:status:update', (data) => {
+      socket.on('report:status:update', (data: any) => {
         this.handleReportStatusUpdate(socket, data);
       });
 
       // Handle real-time messaging
-      socket.on('message:send', (data) => {
+      socket.on('message:send', (data: any) => {
         this.handleMessageSend(socket, data);
       });
 
       // Handle analytics requests
-      socket.on('analytics:subscribe', (data) => {
+      socket.on('analytics:subscribe', (data: any) => {
         this.handleAnalyticsSubscription(socket, data);
       });
 
       // Handle location-based subscriptions
-      socket.on('location:subscribe', (data) => {
+      socket.on('location:subscribe', (data: any) => {
         this.handleLocationSubscription(socket, data);
       });
 
@@ -137,7 +127,7 @@ export class WebSocketService {
   }
 
   // Real-time report submission
-  private handleReportSubmission(socket: AuthenticatedSocket, data: any) {
+  private handleReportSubmission(socket: any, data: any) {
     try {
       logger.info('Real-time report submission', {
         userId: socket.userId,
@@ -171,7 +161,7 @@ export class WebSocketService {
   }
 
   // Real-time status updates
-  private handleReportStatusUpdate(socket: AuthenticatedSocket, data: any) {
+  private handleReportStatusUpdate(socket: any, data: any) {
     try {
       logger.info('Real-time report status update', {
         userId: socket.userId,
@@ -203,7 +193,7 @@ export class WebSocketService {
   }
 
   // Real-time messaging
-  private handleMessageSend(socket: AuthenticatedSocket, data: any) {
+  private handleMessageSend(socket: any, data: any) {
     try {
       logger.info('Real-time message send', {
         senderId: socket.userId,
@@ -232,7 +222,7 @@ export class WebSocketService {
   }
 
   // Analytics subscription
-  private handleAnalyticsSubscription(socket: AuthenticatedSocket, data: any) {
+  private handleAnalyticsSubscription(socket: any, data: any) {
     try {
       const { type, filters } = data;
       
@@ -258,7 +248,7 @@ export class WebSocketService {
   }
 
   // Location-based subscription
-  private handleLocationSubscription(socket: AuthenticatedSocket, data: any) {
+  private handleLocationSubscription(socket: any, data: any) {
     try {
       const { city, state, radius } = data;
       const locationRoom = `location:${city}:${state}`;

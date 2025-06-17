@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { reportsApi } from '../../services/api';
-import TimelineFeed from '../../components/ui/TimelineFeed';
+import RealTimeNotifications from '../../components/notifications/RealTimeNotifications';
 import {
   AlertTriangle,
   FileText,
@@ -11,9 +11,24 @@ import {
   CheckCircle,
   XCircle,
   Plus,
-  TrendingUp
+  TrendingUp,
+  Bell,
+  Search,
+  BarChart3,
+  MapPin,
+  Calendar,
+  Activity,
+  User,
+  Settings,
+  LogOut,
+  Sun,
+  Moon,
+  Globe,
+  Home,
+  Eye,
+  Shield
 } from 'lucide-react';
-import '../../styles/report-post.css';
+import '../../styles/citizen-dashboard.css';
 
 const UserDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -21,11 +36,14 @@ const UserDashboard: React.FC = () => {
     totalReports: 0,
     pendingReports: 0,
     resolvedReports: 0,
+    rejectedReports: 0,
     unreadMessages: 0
   });
-  const [recentReports, setRecentReports] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [darkMode, setDarkMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Show empty state if no reports
   const showEmptyState = stats.totalReports === 0;
@@ -59,7 +77,8 @@ const UserDashboard: React.FC = () => {
             totalReports,
             pendingReports,
             resolvedReports,
-            unreadMessages: 0 // TODO: Implement messages API
+            rejectedReports: 0, // TODO: Calculate from actual data
+            unreadMessages: 2 // Mock unread messages
           });
         } else {
           console.warn('❌ DEBUGGING: Failed to fetch reports:', reportsResponse.error);
@@ -122,190 +141,290 @@ const UserDashboard: React.FC = () => {
     );
   }
 
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.documentElement.setAttribute('data-theme', darkMode ? 'light' : 'dark');
+  };
+
+  // Mock recent activity data
+  const mockActivity = [
+    {
+      id: 1,
+      type: 'report_submitted',
+      title: 'New report submitted',
+      description: 'Report #CR-2024-001 has been submitted successfully',
+      time: '2 hours ago',
+      icon: FileText,
+      color: 'var(--primary-blue)'
+    },
+    {
+      id: 2,
+      type: 'status_update',
+      title: 'Report status updated',
+      description: 'Report #CR-2024-002 is now under investigation',
+      time: '1 day ago',
+      icon: Clock,
+      color: 'var(--warning-yellow)'
+    },
+    {
+      id: 3,
+      type: 'report_resolved',
+      title: 'Report resolved',
+      description: 'Report #CR-2024-003 has been successfully resolved',
+      time: '3 days ago',
+      icon: CheckCircle,
+      color: 'var(--success-green)'
+    }
+  ];
+
   return (
-    <div className="page-content">
-      {/* Error Message */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex">
-            <AlertTriangle className="h-5 w-5 text-red-400 mr-3 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-medium text-red-800">Error Loading Dashboard</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
+    <div className="citizen-dashboard" data-theme={darkMode ? 'dark' : 'light'}>
+      {/* Header (Top Bar) */}
+      <header className="dashboard-header">
+        <div className="header-left">
+          <Link to="/" className="app-logo">
+            <Shield className="h-8 w-8" />
+            AntiCorruption Portal
+          </Link>
+        </div>
+
+        <div className="header-right">
+          <RealTimeNotifications />
+
+          <div className="header-controls">
+            <button className="control-btn" onClick={toggleDarkMode} title="Toggle theme">
+              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+
+            <button className="control-btn" title="Language">
+              <Globe className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="user-dropdown">
+            <div className="user-avatar" title={`${user?.firstName} ${user?.lastName}`}>
+              {user?.firstName?.charAt(0) || 'U'}
             </div>
           </div>
         </div>
-      )}
+      </header>
 
-      {/* Welcome Section */}
-      <div className="dashboard-welcome">
-        <h1 className="welcome-title">
-          Welcome back, {user?.firstName}!
-        </h1>
-        <p className="welcome-subtitle">
-          Thank you for your commitment to fighting corruption. Your reports help create a more transparent society.
-        </p>
-      </div>
+      {/* Sidebar (Persistent Left Menu) */}
+      <aside className={`dashboard-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <nav className="sidebar-nav">
+          <Link to="/dashboard" className="nav-item active">
+            <Home className="h-5 w-5" />
+            Dashboard
+          </Link>
 
-      {/* Statistics Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-header">
-            <div className="stat-icon blue">
-              <FileText className="h-5 w-5" />
+          <Link to="/reports/new" className="nav-item">
+            <Plus className="h-5 w-5" />
+            Submit Report
+          </Link>
+
+          <Link to="/reports" className="nav-item">
+            <FileText className="h-5 w-5" />
+            My Reports
+          </Link>
+
+          <Link to="/messages" className="nav-item">
+            <MessageSquare className="h-5 w-5" />
+            Messages
+            {stats.unreadMessages > 0 && (
+              <span className="message-badge">{stats.unreadMessages}</span>
+            )}
+          </Link>
+
+          <Link to="/profile" className="nav-item">
+            <User className="h-5 w-5" />
+            Profile
+          </Link>
+        </nav>
+      </aside>
+
+      {/* Main Dashboard Body */}
+      <main className="dashboard-main">
+        {/* Error Message */}
+        {error && (
+          <div style={{
+            background: 'var(--emergency-red)',
+            color: 'white',
+            padding: '16px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <AlertTriangle className="h-5 w-5" />
+            {error}
+          </div>
+        )}
+
+        {/* Welcome Banner */}
+        <div className="welcome-banner">
+          <h1 className="welcome-title">
+            Welcome back, {user?.firstName || 'User'}! Thank you for contributing to a more transparent society.
+          </h1>
+          <p className="welcome-subtitle">
+            Your reports make a difference. Together, we're building a corruption-free future.
+          </p>
+        </div>
+
+        {/* Summary Metrics (Top Row - Cards) */}
+        <div className="metrics-grid">
+          <div className="metric-card total" onClick={() => console.log('Navigate to all reports')}>
+            <div className="metric-header">
+              <div className="metric-icon">
+                <FileText className="h-6 w-6" />
+              </div>
+              <Eye className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             </div>
-            <div className="stat-content">
+            <div className="metric-content">
               <h3>Total Reports</h3>
-              <p>{stats.totalReports}</p>
-              {showEmptyState && (
-                <span className="text-xs text-gray-500 mt-1 block">
-                  Start by submitting your first report
-                </span>
-              )}
+              <div className="metric-value">{stats.totalReports}</div>
+            </div>
+          </div>
+
+          <div className="metric-card pending" onClick={() => console.log('Navigate to pending reports')}>
+            <div className="metric-header">
+              <div className="metric-icon">
+                <Clock className="h-6 w-6" />
+              </div>
+              <Eye className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <div className="metric-content">
+              <h3>Pending Reports</h3>
+              <div className="metric-value">{stats.pendingReports}</div>
+            </div>
+          </div>
+
+          <div className="metric-card resolved" onClick={() => console.log('Navigate to resolved reports')}>
+            <div className="metric-header">
+              <div className="metric-icon">
+                <CheckCircle className="h-6 w-6" />
+              </div>
+              <Eye className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <div className="metric-content">
+              <h3>Resolved Reports</h3>
+              <div className="metric-value">{stats.resolvedReports}</div>
+            </div>
+          </div>
+
+          <div className="metric-card rejected" onClick={() => console.log('Navigate to rejected reports')}>
+            <div className="metric-header">
+              <div className="metric-icon">
+                <XCircle className="h-6 w-6" />
+              </div>
+              <Eye className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <div className="metric-content">
+              <h3>Rejected Reports</h3>
+              <div className="metric-value">{stats.rejectedReports}</div>
             </div>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-header">
-            <div className="stat-icon yellow">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div className="stat-content">
-              <h3>Pending</h3>
-              <p>{stats.pendingReports}</p>
-            </div>
+        {/* Quick Action Buttons (Middle Row) */}
+        <div className="quick-actions">
+          <h2 className="section-title">Quick Actions</h2>
+          <div className="actions-grid">
+            <Link to="/reports/new" className="action-button primary">
+              <Plus className="action-icon" />
+              Submit New Report
+            </Link>
+
+            <Link to="/reports/emergency" className="action-button emergency">
+              <AlertTriangle className="action-icon" />
+              Emergency Report
+            </Link>
+
+            <Link to="/reports/anonymous" className="action-button success">
+              <MessageSquare className="action-icon" />
+              Anonymous Tip
+            </Link>
+
+            <Link to="/reports/track" className="action-button purple">
+              <Search className="action-icon" />
+              Track Reports
+            </Link>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-header">
-            <div className="stat-icon green">
-              <CheckCircle className="h-5 w-5" />
+        {/* Dashboard Grid (Bottom) */}
+        <div className="dashboard-grid">
+          {/* Recent Activity Feed (Bottom Left Panel) */}
+          <div className="activity-panel">
+            <div className="panel-header">
+              <h3 className="panel-title">
+                <Activity className="h-5 w-5" />
+                Recent Activity
+              </h3>
             </div>
-            <div className="stat-content">
-              <h3>Resolved</h3>
-              <p>{stats.resolvedReports}</p>
+            <div className="activity-list">
+              {mockActivity.map((activity) => (
+                <div key={activity.id} className="activity-item">
+                  <div className="activity-content">
+                    <div
+                      className="activity-icon"
+                      style={{ background: activity.color, color: 'white' }}
+                    >
+                      <activity.icon className="h-4 w-4" />
+                    </div>
+                    <div className="activity-details">
+                      <h4>{activity.title}</h4>
+                      <p>{activity.description}</p>
+                      <span className="activity-time">{activity.time}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Corruption Trends / Statistics (Bottom Right Panel) */}
+          <div className="trends-panel">
+            <div className="panel-header">
+              <h3 className="panel-title">
+                <BarChart3 className="h-5 w-5" />
+                Corruption Trends
+              </h3>
+            </div>
+            <div className="trends-content">
+              <div className="trend-item">
+                <span className="trend-label">Reports by Category</span>
+                <span className="trend-value">Bribery (45%)</span>
+              </div>
+              <div className="trend-item">
+                <span className="trend-label">Most Affected Area</span>
+                <span className="trend-value">Public Services</span>
+              </div>
+              <div className="trend-item">
+                <span className="trend-label">Resolution Rate</span>
+                <span className="trend-value">78%</span>
+              </div>
+              <div className="trend-item">
+                <span className="trend-label">Average Response Time</span>
+                <span className="trend-value">5.2 days</span>
+              </div>
+              <div className="trend-item">
+                <span className="trend-label">Reports This Month</span>
+                <span className="trend-value">+23% ↗</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* Quick Actions */}
-      <div className="action-cards">
-        <Link
-          to="/reports/new"
-          className="action-card"
-          style={{ borderLeft: '4px solid #3b82f6' }}
-          aria-label="Submit a new corruption report"
-        >
-          <div className="action-header">
-            <div className="action-icon" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
-              <Plus className="h-7 w-7" aria-hidden="true" />
-            </div>
-            <div>
-              <h3 className="action-title">Submit New Report</h3>
-              <p className="action-description">Report a corruption incident safely and securely</p>
-            </div>
-          </div>
+      {/* Unread Messages Widget (Floating) */}
+      {stats.unreadMessages > 0 && (
+        <Link to="/messages" className="messages-widget">
+          <MessageSquare className="h-6 w-6" />
+          <span className="message-badge">{stats.unreadMessages}</span>
         </Link>
-
-        <div
-          className="action-card emergency"
-          style={{ borderLeft: '4px solid #dc2626' }}
-          role="button"
-          tabIndex={0}
-          aria-label="Submit an emergency corruption report"
-        >
-          <div className="action-header">
-            <div className="action-icon" style={{ backgroundColor: '#fef2f2', color: '#dc2626' }}>
-              <AlertTriangle className="h-7 w-7" aria-hidden="true" />
-            </div>
-            <div>
-              <h3 className="action-title">Emergency Report</h3>
-              <p className="action-description">Report urgent corruption cases requiring immediate attention</p>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="action-card"
-          style={{ borderLeft: '4px solid #16a34a' }}
-          role="button"
-          tabIndex={0}
-          aria-label="Submit an anonymous tip"
-        >
-          <div className="action-header">
-            <div className="action-icon" style={{ backgroundColor: '#f0fdf4', color: '#16a34a' }}>
-              <MessageSquare className="h-7 w-7" aria-hidden="true" />
-            </div>
-            <div>
-              <h3 className="action-title">Anonymous Tip</h3>
-              <p className="action-description">Submit anonymous information with complete privacy</p>
-            </div>
-          </div>
-        </div>
-
-        <Link
-          to="/reports/track"
-          className="action-card"
-          style={{ borderLeft: '4px solid #9333ea' }}
-          aria-label="Track the status of your reports"
-        >
-          <div className="action-header">
-            <div className="action-icon" style={{ backgroundColor: '#faf5ff', color: '#9333ea' }}>
-              <TrendingUp className="h-7 w-7" aria-hidden="true" />
-            </div>
-            <div>
-              <h3 className="action-title">Track Report</h3>
-              <p className="action-description">Check the status and progress of your reports</p>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Recent Activity & Notifications */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-header">
-            <div className="stat-icon blue">
-              <MessageSquare className="h-5 w-5" />
-            </div>
-            <div className="stat-content">
-              <h3>Unread Messages</h3>
-              <p>{stats.unreadMessages}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <div className="stat-icon purple">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div className="stat-content">
-              <h3>Reports This Month</h3>
-              <p>3</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-header">
-            <div className="stat-icon green">
-              <CheckCircle className="h-5 w-5" />
-            </div>
-            <div className="stat-content">
-              <h3>Success Rate</h3>
-              <p>60%</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Timeline Feed - Facebook-like Posts */}
-      <TimelineFeed className="dashboard-timeline" />
-
+      )}
     </div>
   );
 };

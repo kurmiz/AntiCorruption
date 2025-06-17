@@ -3,6 +3,15 @@ import Report, { IReport } from '../models/Report';
 import { AuthRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
 import { Types } from 'mongoose';
+import { analyticsService } from '../services/analytics';
+import {
+  validateReportInput,
+  validateReportUpdate,
+  validateReportId,
+  handleValidationErrors,
+  validateFileUpload,
+  auditLog
+} from '../middleware/validation';
 
 // Helper function to parse FormData with dot notation
 const parseFormDataWithDotNotation = (body: any) => {
@@ -60,7 +69,16 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       estimatedLoss,
       currency = 'INR',
       urgencyLevel = 5,
-      tags = []
+      tags = [],
+      // Enhanced Submit Report Fields
+      personsInvolved,
+      departmentInvolved,
+      monetaryValue,
+      witnesses,
+      contactInfo,
+      previousComplaints = false,
+      termsAccepted = false,
+      isDraft = false
     } = parsedBody;
 
     // Validate required fields
@@ -89,6 +107,14 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({
         success: false,
         message: 'Incident date is required'
+      });
+    }
+
+    // Validate terms acceptance for non-draft reports
+    if (!isDraft && !termsAccepted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Terms and conditions must be accepted'
       });
     }
 
@@ -187,6 +213,13 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Parse additional fields
+    const parsedPersonsInvolved = personsInvolved ?
+      (typeof personsInvolved === 'string' ? personsInvolved.split(',').map((p: string) => p.trim()).filter(Boolean) : personsInvolved) : [];
+
+    const parsedWitnesses = witnesses ?
+      (typeof witnesses === 'string' ? witnesses.split(',').map((w: string) => w.trim()).filter(Boolean) : witnesses) : [];
+
     // Create report data
     const reportData: Partial<IReport> = {
       title,
@@ -195,16 +228,24 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       incidentDate: fullIncidentDate,
       location: parsedLocation,
       isAnonymous,
-      involvedParties: parsedInvolvedParties,
+      involvedParties: parsedInvolvedParties.length > 0 ? parsedInvolvedParties : parsedPersonsInvolved,
       evidence,
-      estimatedLoss: estimatedLoss ? parseFloat(estimatedLoss) : undefined,
+      estimatedLoss: estimatedLoss ? parseFloat(estimatedLoss) : (monetaryValue ? parseFloat(monetaryValue) : undefined),
       currency,
       urgencyLevel: parseInt(urgencyLevel) || 5,
       tags: parsedTags,
-      status: 'pending',
-      priority: 'medium',
+      status: isDraft ? 'draft' : 'pending',
+      priority: urgencyLevel >= 8 ? 'critical' : urgencyLevel >= 6 ? 'high' : urgencyLevel >= 4 ? 'medium' : 'low',
       publicVisibility: false,
-      viewCount: 0
+      viewCount: 0,
+      // Enhanced Submit Report Fields
+      departmentInvolved,
+      monetaryValue: monetaryValue ? parseFloat(monetaryValue) : undefined,
+      witnesses: parsedWitnesses,
+      contactInfo: (!isAnonymous && contactInfo) ? contactInfo : undefined,
+      previousComplaints: previousComplaints === 'true' || previousComplaints === true,
+      termsAccepted: termsAccepted === 'true' || termsAccepted === true,
+      isDraft: isDraft === 'true' || isDraft === true
     };
 
     // Set reporter if not anonymous
@@ -235,6 +276,46 @@ export const createReport = async (req: AuthRequest, res: Response) => {
       mongoDbId: savedReport._id
     });
 
+    // Trigger real-time analytics update
+    try {
+      await analyticsService.broadcastAnalyticsUpdate('report:created', {
+        reportId: report._id,
+        category: report.category,
+        location: report.location,
+        urgencyLevel: report.urgencyLevel
+      });
+    } catch (analyticsError) {
+      logger.warn('Failed to broadcast analytics update:', analyticsError);
+    }
+
+    // Emit real-time notification via WebSocket
+    const webSocketService = (global as any).webSocketService;
+    if (webSocketService) {
+      webSocketService.emitToPublic('report:new', {
+        id: report._id,
+        title: report.title,
+        category: report.category,
+        location: report.location,
+        urgencyLevel: report.urgencyLevel,
+        isAnonymous: report.isAnonymous,
+        timestamp: report.createdAt
+      });
+
+      // Emit to location-specific room
+      if (report.location?.city && report.location?.state) {
+        webSocketService.emitLocationUpdate(
+          report.location.city,
+          report.location.state,
+          {
+            type: 'new_report',
+            reportId: report._id,
+            category: report.category,
+            urgencyLevel: report.urgencyLevel
+          }
+        );
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: {
@@ -245,15 +326,24 @@ export const createReport = async (req: AuthRequest, res: Response) => {
           category: report.category,
           status: report.status,
           priority: report.priority,
+          urgencyLevel: report.urgencyLevel,
           incidentDate: report.incidentDate,
           location: report.location,
           isAnonymous: report.isAnonymous,
+          isDraft: report.isDraft,
+          departmentInvolved: report.departmentInvolved,
+          monetaryValue: report.monetaryValue,
+          witnesses: report.witnesses,
+          contactInfo: report.contactInfo,
           evidence: report.evidence,
+          trackingId: report._id.toString().slice(-8).toUpperCase(),
           createdAt: report.createdAt,
-          updatedAt: report.updatedAt
+          updatedAt: report.updatedAt,
+          canEdit: true,
+          canDelete: report.status === 'pending' || report.status === 'draft'
         }
       },
-      message: 'Report submitted successfully'
+      message: report.isDraft ? 'Report saved as draft' : 'Report submitted successfully'
     });
 
   } catch (error) {
@@ -521,7 +611,7 @@ export const getReport = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Update a report
+// Enhanced update report with validation and permissions
 export const updateReport = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -542,27 +632,123 @@ export const updateReport = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check permissions
-    const isOwner = report.reporterId?.equals(req.user!._id);
-    const isAdmin = req.user!.role === 'admin';
+    // Enhanced permission checking
+    const isOwner = report.reporterId?.toString() === req.userId;
+    const isAdmin = req.userRole === 'admin';
+    const isPolice = req.userRole === 'police';
 
-    if (!isOwner && !isAdmin) {
+    if (!req.userRole) {
+      return res.status(401).json({
+        success: false,
+        message: 'User role not found'
+      });
+    }
+
+    // Citizens can only edit their own reports if status is pending or under_review
+    if (req.userRole === 'citizen') {
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only edit your own reports'
+        });
+      }
+
+      if (!['pending', 'under_review'].includes(report.status)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot edit report after investigation has started'
+        });
+      }
+    }
+
+    // Police and admins have broader edit permissions
+    if (!isOwner && !isAdmin && !isPolice) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
       });
     }
 
-    // Update allowed fields
-    const allowedFields = ['title', 'description', 'category', 'location', 'involvedParties'];
+    // Define allowed fields based on user role
+    let allowedFields: string[] = [];
+
+    if (req.userRole === 'citizen' && isOwner) {
+      allowedFields = ['title', 'description', 'category', 'location', 'urgencyLevel', 'priority'];
+    } else if (req.userRole === 'police') {
+      allowedFields = ['priority', 'assignedTo', 'investigationNotes'];
+    } else if (req.userRole === 'admin') {
+      allowedFields = ['title', 'description', 'category', 'location', 'priority', 'assignedTo', 'status'];
+    }
+
+    // Apply updates only to allowed fields
+    const updates: any = {};
     allowedFields.forEach(field => {
       if (updateData[field] !== undefined) {
-        (report as any)[field] = updateData[field];
+        updates[field] = updateData[field];
       }
     });
 
-    report.lastUpdatedBy = req.user!._id;
+    // Handle file uploads if present
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      const newEvidence = req.files.map((file: any) => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+        uploadedAt: new Date(),
+        uploadedBy: req.userId
+      }));
+
+      updates.evidence = [...(report.evidence || []), ...newEvidence];
+    }
+
+    // Update the report
+    Object.assign(report, updates);
+    report.lastUpdatedBy = new Types.ObjectId(req.userId!);
+    report.updatedAt = new Date();
+
     await report.save();
+
+    // Emit real-time update
+    const webSocketService = (global as any).webSocketService;
+    if (webSocketService) {
+      webSocketService.emitToUser(report.reporterId?.toString(), 'report:updated', {
+        reportId: report._id,
+        updates: Object.keys(updates),
+        updatedBy: req.userRole,
+        timestamp: new Date()
+      });
+
+      // Notify assigned investigator if exists
+      if (report.assignedTo) {
+        webSocketService.emitToUser(report.assignedTo.toString(), 'report:updated', {
+          reportId: report._id,
+          updates: Object.keys(updates),
+          updatedBy: req.userRole,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Trigger analytics update
+    try {
+      await analyticsService.broadcastAnalyticsUpdate('report:updated', {
+        reportId: report._id,
+        category: report.category,
+        status: report.status,
+        updatedBy: req.userRole
+      });
+    } catch (analyticsError) {
+      logger.warn('Failed to broadcast analytics update:', analyticsError);
+    }
+
+    logger.info('Report updated successfully', {
+      reportId: report._id,
+      updatedBy: req.userId,
+      userRole: req.userRole,
+      updatedFields: Object.keys(updates)
+    });
 
     res.json({
       success: true,
@@ -573,7 +759,17 @@ export const updateReport = async (req: AuthRequest, res: Response) => {
           description: report.description,
           category: report.category,
           status: report.status,
-          updatedAt: report.updatedAt
+          priority: report.priority,
+          urgencyLevel: report.urgencyLevel,
+          location: report.location,
+          evidence: report.evidence,
+          updatedAt: report.updatedAt,
+          canEdit: req.userRole === 'citizen' ?
+            isOwner && ['pending', 'under_review'].includes(report.status) :
+            req.userRole ? ['admin', 'police'].includes(req.userRole) : false,
+          canDelete: req.userRole === 'citizen' ?
+            isOwner && report.status === 'pending' :
+            req.userRole === 'admin'
         }
       },
       message: 'Report updated successfully'
@@ -582,7 +778,8 @@ export const updateReport = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     logger.error('Error updating report', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      reportId: req.params.id
+      reportId: req.params.id,
+      userId: req.userId
     });
 
     res.status(500).json({
@@ -592,7 +789,7 @@ export const updateReport = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Delete a report
+// Enhanced delete report with strict permissions and audit logging
 export const deleteReport = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -612,9 +809,34 @@ export const deleteReport = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check permissions
-    const isOwner = report.reporterId?.equals(req.user!._id);
-    const isAdmin = req.user!.role === 'admin';
+    // Enhanced permission checking
+    const isOwner = report.reporterId?.toString() === req.userId;
+    const isAdmin = req.userRole === 'admin';
+
+    // Citizens can only delete their own reports if status is pending
+    if (req.userRole === 'citizen') {
+      if (!isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'You can only delete your own reports'
+        });
+      }
+
+      if (report.status !== 'pending') {
+        return res.status(403).json({
+          success: false,
+          message: 'Cannot delete report after investigation has started'
+        });
+      }
+    }
+
+    // Only admins can delete reports in other statuses
+    if (!isAdmin && report.status !== 'pending') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only administrators can delete reports under investigation'
+      });
+    }
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
@@ -623,17 +845,99 @@ export const deleteReport = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Store report data for audit log before deletion
+    const reportData = {
+      id: report._id,
+      title: report.title,
+      category: report.category,
+      status: report.status,
+      reporterId: report.reporterId,
+      createdAt: report.createdAt
+    };
+
+    // Delete associated files if any
+    if (report.evidence && report.evidence.length > 0) {
+      // TODO: Implement file cleanup from storage
+      logger.info('Files to be cleaned up:', {
+        reportId: report._id,
+        fileCount: report.evidence.length
+      });
+    }
+
     await Report.findByIdAndDelete(id);
+
+    // Emit real-time update
+    const webSocketService = (global as any).webSocketService;
+    if (webSocketService) {
+      // Notify the report owner if deleted by admin
+      if (!isOwner && report.reporterId) {
+        webSocketService.emitToUser(report.reporterId.toString(), 'report:deleted', {
+          reportId: report._id,
+          title: report.title,
+          deletedBy: req.userRole,
+          timestamp: new Date(),
+          reason: 'Administrative action'
+        });
+      }
+
+      // Notify assigned investigator if exists
+      if (report.assignedTo) {
+        webSocketService.emitToUser(report.assignedTo.toString(), 'report:deleted', {
+          reportId: report._id,
+          title: report.title,
+          deletedBy: req.userRole,
+          timestamp: new Date()
+        });
+      }
+
+      // Broadcast to public channels for analytics
+      webSocketService.emitToPublic('report:deleted', {
+        category: report.category,
+        status: report.status,
+        timestamp: new Date()
+      });
+    }
+
+    // Trigger analytics update
+    try {
+      await analyticsService.broadcastAnalyticsUpdate('report:deleted', {
+        reportId: report._id,
+        category: report.category,
+        status: report.status,
+        deletedBy: req.userRole
+      });
+    } catch (analyticsError) {
+      logger.warn('Failed to broadcast analytics update:', analyticsError);
+    }
+
+    // Comprehensive audit logging
+    logger.info('Report deleted successfully', {
+      reportId: report._id,
+      reportTitle: report.title,
+      reportCategory: report.category,
+      reportStatus: report.status,
+      deletedBy: req.userId,
+      userRole: req.userRole,
+      isOwner,
+      timestamp: new Date(),
+      reportData
+    });
 
     res.json({
       success: true,
-      message: 'Report deleted successfully'
+      message: 'Report deleted successfully',
+      data: {
+        deletedReportId: id,
+        timestamp: new Date()
+      }
     });
 
   } catch (error) {
     logger.error('Error deleting report', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      reportId: req.params.id
+      reportId: req.params.id,
+      userId: req.userId,
+      userRole: req.userRole
     });
 
     res.status(500).json({

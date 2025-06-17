@@ -3,9 +3,12 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import { logger } from './utils/logger';
 import { databaseManager } from './config/database';
 import { databaseService } from './services/DatabaseService';
+import { WebSocketService, webSocketService } from './services/websocket';
+import { analyticsService } from './services/analytics';
 import authRoutes from './routes/auth';
 import reportRoutes from './routes/reports';
 
@@ -17,15 +20,16 @@ interface CustomError extends Error {
 // Load environment variables
 dotenv.config();
 
-// Create Express app
+// Create Express app and HTTP server
 const app = express();
+const server = createServer(app);
 
 // Apply security middleware
 app.use(helmet());
 
 // Configure CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173'],
   credentials: true
 }));
 
@@ -101,6 +105,47 @@ app.get('/api/status/database', async (req: Request, res: Response) => {
 // Static file serving for uploads
 app.use('/uploads', express.static('uploads'));
 
+// Analytics endpoint
+app.get('/api/analytics', async (req: Request, res: Response) => {
+  try {
+    const filters = req.query;
+    const analyticsData = await analyticsService.getAnalyticsData(filters);
+
+    res.json({
+      success: true,
+      data: analyticsData
+    });
+  } catch (error) {
+    logger.error('Analytics endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics data'
+    });
+  }
+});
+
+// Real-time metrics endpoint
+app.get('/api/analytics/realtime', async (req: Request, res: Response) => {
+  try {
+    const filters = req.query;
+    const analyticsData = await analyticsService.getAnalyticsData(filters);
+
+    res.json({
+      success: true,
+      data: {
+        realTimeMetrics: analyticsData.realTimeMetrics,
+        connectedUsers: webSocketService?.getConnectedUsersCount() || 0
+      }
+    });
+  } catch (error) {
+    logger.error('Real-time analytics endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch real-time analytics'
+    });
+  }
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/reports', reportRoutes);
@@ -141,13 +186,19 @@ const startServer = async () => {
       collections: healthStatus.stats?.collections || 0
     });
 
+    // Initialize WebSocket service
+    const wsService = new WebSocketService(server);
+    // Make it globally available
+    (global as any).webSocketService = wsService;
+
     // Start listening
-    const server = app.listen(PORT, () => {
+    server.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`, {
         environment: process.env.NODE_ENV || 'development',
         port: PORT,
         healthEndpoint: `http://localhost:${PORT}/health`,
-        apiEndpoint: `http://localhost:${PORT}/api`
+        apiEndpoint: `http://localhost:${PORT}/api`,
+        websocket: 'enabled'
       });
     });
 

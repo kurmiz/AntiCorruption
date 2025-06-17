@@ -6,12 +6,17 @@ import User, { IUser } from '../models/User'; // Import User model and IUser int
 // Removed in-memory user storage and InMemoryUser type
 
 export interface AuthRequest extends Request {
-  user?: IUser | null; // Updated to use IUser
+  user?: IUser | null;
+  userId?: string;
+  userRole?: string;
 }
 
-interface CustomJwtPayload {
-  userId: string;
-  role: string;
+export interface JWTPayload {
+  user_id: string;
+  userId: string; // Keep both for compatibility
+  role: 'citizen' | 'admin' | 'police';
+  exp: number;
+  iat: number;
 }
 
 declare global {
@@ -38,18 +43,32 @@ export const protect = async (req: AuthRequest, res: Response, next: NextFunctio
     }
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as CustomJwtPayload;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JWTPayload;
+
+      // Support both user_id and userId for compatibility
+      const userId = decoded.user_id || decoded.userId;
+
       // Fetch user from MongoDB
-      const user = await User.findById(decoded.userId).select('-password'); // Exclude password
-      
+      const user = await User.findById(userId).select('-password');
+
       if (!user) {
+        logger.warn('User not found for token:', { userId });
         return res.status(401).json({
           success: false,
-          message: 'User not found or token invalid', // More generic message
+          message: 'User not found or token invalid',
         });
       }
 
+      // Attach user data to request
       req.user = user;
+      req.userId = user._id.toString();
+      req.userRole = user.role;
+
+      logger.debug('User authenticated:', {
+        userId: req.userId,
+        role: req.userRole
+      });
+
       next();
     } catch (error) {
       logger.error('JWT verification failed:', error);
