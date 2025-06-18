@@ -187,18 +187,35 @@ export const validateFileUpload = (req: AuthRequest, res: Response, next: NextFu
     if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
       return next(); // No files uploaded, continue
     }
-    
-    const files = Array.isArray(req.files) ? req.files : [req.files];
+
+    // Handle different file upload formats
+    let files: Express.Multer.File[] = [];
+
+    if (Array.isArray(req.files)) {
+      files = req.files;
+    } else if (req.files && typeof req.files === 'object') {
+      // Handle named fields (req.files is an object with field names as keys)
+      files = Object.values(req.files).flat();
+    }
+
     const maxFiles = 5;
-    
+
     if (files.length > maxFiles) {
       return res.status(400).json({
         success: false,
         message: `Maximum ${maxFiles} files allowed`
       });
     }
-    
+
     for (const file of files) {
+      // Ensure file is a proper Multer file object
+      if (!file || typeof file !== 'object' || !file.mimetype || !file.size) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid file format'
+        });
+      }
+
       // Validate file type
       if (!validateFileType(file.mimetype)) {
         return res.status(400).json({
@@ -206,17 +223,17 @@ export const validateFileUpload = (req: AuthRequest, res: Response, next: NextFu
           message: `Invalid file type: ${file.mimetype}. Allowed types: images, PDFs, videos, documents`
         });
       }
-      
+
       // Validate file size
       if (!validateFileSize(file.size)) {
         return res.status(400).json({
           success: false,
-          message: `File too large: ${file.originalname}. Maximum size: 50MB`
+          message: `File too large: ${file.originalname || 'unknown'}. Maximum size: 50MB`
         });
       }
-      
+
       // Validate filename
-      if (file.originalname.length > 255) {
+      if (file.originalname && file.originalname.length > 255) {
         return res.status(400).json({
           success: false,
           message: 'Filename too long'

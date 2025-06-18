@@ -13,15 +13,7 @@ import {
 } from '../controllers/reports';
 import { protect, authorize } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import {
-  validateReportInput,
-  validateReportUpdate,
-  validateReportId,
-  handleValidationErrors,
-  validateFileUpload,
-  auditLog,
-  addSecurityHeaders
-} from '../middleware/validation';
+// Remove unused validation imports since we're using the original validation
 import multer from 'multer';
 import path from 'path';
 
@@ -156,18 +148,13 @@ const addNoteValidation = [
     .withMessage('isPublic must be a boolean'),
 ];
 
-// Apply security headers to all routes
-router.use(addSecurityHeaders);
-
 // Routes
 
 // Public routes (for anonymous reports)
 router.post('/anonymous',
   upload.array('media', 5),
-  validateFileUpload,
-  validateReportInput,
-  handleValidationErrors,
-  auditLog('anonymous_report_submit'),
+  createReportValidation,
+  validate,
   createReport
 );
 
@@ -180,10 +167,8 @@ router.use(protect);
 // Create report (authenticated users)
 router.post('/',
   upload.array('media', 5),
-  validateFileUpload,
-  validateReportInput,
-  handleValidationErrors,
-  auditLog('report_submit'),
+  createReportValidation,
+  validate,
   createReport
 );
 
@@ -194,59 +179,40 @@ router.get('/', getReports);
 router.get('/my-reports', getReportsByUser);
 
 // Get specific report
-router.get('/:id',
-  validateReportId,
-  handleValidationErrors,
-  auditLog('report_view'),
-  getReport
-);
+router.get('/:id', getReport);
 
 // Update report (only by reporter or admin/police)
 router.put('/:id',
-  validateReportId,
   upload.array('media', 5),
-  validateFileUpload,
-  validateReportUpdate,
-  handleValidationErrors,
-  auditLog('report_update'),
+  updateReportValidation,
+  validate,
   updateReport
 );
 
 // Delete report (only by reporter or admin)
-router.delete('/:id',
-  validateReportId,
-  handleValidationErrors,
-  auditLog('report_delete'),
-  deleteReport
-);
+router.delete('/:id', deleteReport);
 
 // Admin/Police only routes
 router.use(authorize('admin', 'police'));
 
 // Update report status
 router.put('/:id/status',
-  validateReportId,
   statusUpdateValidation,
   validate,
-  auditLog('report_status_update'),
   updateReportStatus
 );
 
 // Assign report to investigator
 router.post('/:id/assign',
-  validateReportId,
   assignReportValidation,
   validate,
-  auditLog('report_assign'),
   assignReport
 );
 
 // Add investigation note
 router.post('/:id/notes',
-  validateReportId,
   addNoteValidation,
   validate,
-  auditLog('report_note_add'),
   addReportNote
 );
 

@@ -153,7 +153,7 @@ const RealTimeDashboard: React.FC = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/analytics');
+      const response = await fetch('http://localhost:5001/api/analytics');
       const result = await response.json();
       
       if (result.success) {

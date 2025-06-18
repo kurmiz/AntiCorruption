@@ -87,7 +87,7 @@ class ApiService {
 
   constructor() {
     this.api = axios.create({
-      baseURL: 'http://localhost:5000/api', // Point directly to backend server
+      baseURL: 'http://localhost:5001/api', // Point directly to backend server
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',

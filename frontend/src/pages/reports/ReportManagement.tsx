@@ -78,7 +78,7 @@ const ReportManagement: React.FC = () => {
         ...filters
       });
 
-      const response = await fetch(`http://localhost:5000/api/reports/my-reports?${queryParams}`, {
+      const response = await fetch(`http://localhost:5001/api/reports/my-reports?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -111,7 +111,7 @@ const ReportManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/reports/${reportId}`, {
+      const response = await fetch(`http://localhost:5001/api/reports/${reportId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

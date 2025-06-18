@@ -236,9 +236,9 @@ const EnhancedReportForm: React.FC<EnhancedReportFormProps> = ({
         formData.append('location.coordinates.lng', currentLocation.coords.longitude.toString());
       }
 
-      const endpoint = editMode && reportId 
-        ? `http://localhost:5000/api/reports/${reportId}`
-        : 'http://localhost:5000/api/reports/anonymous';
+      const endpoint = editMode && reportId
+        ? `http://localhost:5001/api/reports/${reportId}`
+        : 'http://localhost:5001/api/reports/anonymous';
       
       const method = editMode ? 'PUT' : 'POST';
 
